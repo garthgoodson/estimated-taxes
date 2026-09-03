@@ -1,0 +1,60 @@
+add_executable(estimated_taxes_storage_tests
+  input_store_tests.cpp
+)
+target_compile_features(estimated_taxes_storage_tests PRIVATE cxx_std_20)
+target_link_libraries(estimated_taxes_storage_tests
+  PRIVATE
+    estimated_taxes_storage
+    SQLite::SQLite3
+)
+
+add_test(
+  NAME backend_storage_tests
+  COMMAND estimated_taxes_storage_tests
+)
+
+add_executable(estimated_taxes_projection_tests
+  projection_tests.cpp
+)
+target_compile_features(estimated_taxes_projection_tests PRIVATE cxx_std_20)
+target_link_libraries(estimated_taxes_projection_tests PRIVATE estimated_taxes_storage)
+
+add_test(
+  NAME backend_projection_tests
+  COMMAND estimated_taxes_projection_tests
+)
+
+add_executable(estimated_taxes_rule_tests
+  tax_rules_tests.cpp
+)
+target_compile_features(estimated_taxes_rule_tests PRIVATE cxx_std_20)
+target_link_libraries(estimated_taxes_rule_tests PRIVATE estimated_taxes_storage SQLite::SQLite3)
+add_test(
+  NAME backend_rule_tests
+  COMMAND estimated_taxes_rule_tests
+)
+
+add_executable(estimated_taxes_calculation_tests tax_calculation_tests.cpp)
+target_compile_features(estimated_taxes_calculation_tests PRIVATE cxx_std_20)
+target_link_libraries(estimated_taxes_calculation_tests PRIVATE estimated_taxes_storage)
+add_test(NAME backend_calculation_tests COMMAND estimated_taxes_calculation_tests)
+
+add_executable(estimated_taxes_recommendation_tests recommendations_tests.cpp)
+target_compile_features(estimated_taxes_recommendation_tests PRIVATE cxx_std_20)
+target_link_libraries(estimated_taxes_recommendation_tests PRIVATE estimated_taxes_storage)
+add_test(NAME backend_recommendation_tests COMMAND estimated_taxes_recommendation_tests)
+
+add_executable(estimated_taxes_snapshot_tests snapshot_tests.cpp)
+target_compile_features(estimated_taxes_snapshot_tests PRIVATE cxx_std_20)
+target_link_libraries(estimated_taxes_snapshot_tests PRIVATE estimated_taxes_storage SQLite::SQLite3)
+add_test(NAME backend_snapshot_tests COMMAND estimated_taxes_snapshot_tests)
+
+add_executable(estimated_taxes_http_server_tests http_server_tests.cpp)
+target_compile_features(estimated_taxes_http_server_tests PRIVATE cxx_std_20)
+target_link_libraries(estimated_taxes_http_server_tests PRIVATE estimated_taxes_storage)
+add_test(NAME backend_http_server_tests COMMAND estimated_taxes_http_server_tests)
+
+add_executable(estimated_taxes_api_tests api_tests.cpp)
+target_compile_features(estimated_taxes_api_tests PRIVATE cxx_std_20)
+target_link_libraries(estimated_taxes_api_tests PRIVATE estimated_taxes_storage PkgConfig::JANSSON)
+add_test(NAME backend_api_tests COMMAND estimated_taxes_api_tests)

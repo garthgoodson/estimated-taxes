@@ -1,0 +1,16 @@
+# CMake build output
+/build/
+
+# Frontend dependencies and generated output
+/frontend/node_modules/
+/frontend/.nuxt/
+/frontend/.output/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Editor and operating-system files
+.DS_Store
+*.swp
