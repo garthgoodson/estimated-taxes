@@ -127,6 +127,12 @@ void test_regular_bonus_and_fallbacks()
               projection.spouses[0].california_withholding.projected_remaining_cents == 105 &&
               has_warning(projection, "bonus_withholding_proportional_allocation"),
           "proportional fallback");
+
+  auto half_cent = inputs();
+  half_cent.quarters[1].spouse_1_paystub = paystub("2026-06-01", "monthly", 1, 1, 1, 1, 2, 2, 1, 1);
+  projection = project_annual(half_cent, "2026-06-15");
+  require(projection.spouses[0].federal_withholding.projected_remaining_cents == 7,
+          "proportional fallback rounds half cents away from zero");
 }
 
 void test_zero_wage_adjustments_are_not_projected()

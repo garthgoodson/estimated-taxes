@@ -9,6 +9,7 @@ add_library(estimated_taxes_storage
   src/api.cpp
   src/database_operations.cpp
   src/input_store.cpp
+  src/money.cpp
   src/projection.cpp
   src/tax_rules.cpp
   src/tax_calculation.cpp

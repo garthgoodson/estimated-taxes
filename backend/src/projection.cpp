@@ -1,4 +1,5 @@
 #include "estimated_taxes/projection.hpp"
+#include "estimated_taxes/money.hpp"
 
 #include <algorithm>
 #include <array>
@@ -190,7 +191,11 @@ void validate_inputs(const TaxYearInputs& inputs, const Date& as_of)
   }
   add_warning(warnings, WarningSeverity::caution, "bonus_withholding_proportional_allocation", path,
               "Current withholding was proportionally allocated between regular wages and bonus wages.");
-  return checked_multiply(current, paystub.current_period_regular_wages_cents) / total_wages;
+  if (paystub.current_period_regular_wages_cents == 0) return 0;
+  if (current > std::numeric_limits<Cents>::max() / paystub.current_period_regular_wages_cents) {
+    throw ProjectionError("monetary projection overflow");
+  }
+  return divide_round_nearest(current * paystub.current_period_regular_wages_cents, total_wages);
 }
 
 [[nodiscard]] ProjectionAmounts amounts(Cents actual, Cents pattern, int periods)

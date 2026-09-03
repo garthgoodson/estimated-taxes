@@ -1,4 +1,5 @@
 #include "estimated_taxes/recommendations.hpp"
+#include "estimated_taxes/money.hpp"
 
 #include <algorithm>
 #include <array>
@@ -30,7 +31,7 @@ Cents completed_payments(const TaxYearInputs& inputs, Jurisdiction jurisdiction,
     if (!payment.date || *payment.date > as_of) {
       throw RecommendationError("recorded payment date is after the as-of date");
     }
-    total += payment.amount_cents;
+    total = checked_add(total, payment.amount_cents);
   }
   return total;
 }
@@ -61,32 +62,34 @@ PaymentRecommendation recommendation(const TaxYearInputs& inputs, const std::str
     return result;
   }
 
-  const Cents annual_target = std::max(Cents{0}, liability - withholding);
+  const Cents annual_target = liability > withholding ? checked_subtract(liability, withholding) : 0;
   const Cents prior_target = quarter == 1 ? 0 : multiply_rate(annual_target, installments.at(static_cast<size_t>(quarter - 2)).cumulative_ppm);
   const Cents cumulative_target = multiply_rate(annual_target, current.cumulative_ppm);
   const Cents credited = completed_payments(inputs, jurisdiction, as_of, quarter);
   const Cents all_paid = all_completed_payments(inputs, jurisdiction, as_of);
-  const Cents recommended = std::max(Cents{0}, cumulative_target - credited);
-  const Cents scheduled = cumulative_target - prior_target;
-  const Cents catch_up = std::max(Cents{0}, recommended - scheduled);
+  const Cents recommended = cumulative_target > credited ? checked_subtract(cumulative_target, credited) : 0;
+  const Cents scheduled = checked_subtract(cumulative_target, prior_target);
+  const Cents catch_up = recommended > scheduled ? checked_subtract(recommended, scheduled) : 0;
   result.annual_target_cents = annual_target;
   result.cumulative_target_cents = cumulative_target;
   result.payments_credited_cents = credited;
   result.scheduled_installment_cents = scheduled;
   result.catch_up_recommendation_cents = catch_up;
-  result.scheduled_recommendation_cents = recommended - catch_up;
+  result.scheduled_recommendation_cents = checked_subtract(recommended, catch_up);
   result.recommended_payment_cents = recommended;
-  result.remaining_before_recommendation_cents = std::max(Cents{0}, annual_target - all_paid);
-  result.remaining_after_recommendation_cents = std::max(Cents{0}, annual_target - all_paid - recommended);
-  result.projected_overpayment_cents = std::max(Cents{0}, withholding + all_paid - liability);
+  result.remaining_before_recommendation_cents = annual_target > all_paid ? checked_subtract(annual_target, all_paid) : 0;
+  const Cents unpaid_after = annual_target > all_paid ? checked_subtract(annual_target, all_paid) : 0;
+  result.remaining_after_recommendation_cents = unpaid_after > recommended ? checked_subtract(unpaid_after, recommended) : 0;
+  const Cents paid_and_withheld = checked_add(withholding, all_paid);
+  result.projected_overpayment_cents = paid_and_withheld > liability ? checked_subtract(paid_and_withheld, liability) : 0;
   result.projected_overpayment = result.projected_overpayment_cents > 0;
   result.recommendation_status = catch_up > 0 ? RecommendationStatus::catch_up_recommended :
                                  recommended > 0 ? RecommendationStatus::payment_recommended :
                                                    RecommendationStatus::no_payment_currently_needed;
   for (int index = quarter; index < 4; ++index) {
     const Cents target = multiply_rate(annual_target, installments[index].cumulative_ppm);
-    const Cents payments = completed_payments(inputs, jurisdiction, as_of, index + 1) + recommended;
-    result.future_outlook.push_back({index + 1, target, std::max(Cents{0}, target - payments)});
+    const Cents payments = checked_add(completed_payments(inputs, jurisdiction, as_of, index + 1), recommended);
+    result.future_outlook.push_back({index + 1, target, target > payments ? checked_subtract(target, payments) : 0});
   }
   return result;
 }
