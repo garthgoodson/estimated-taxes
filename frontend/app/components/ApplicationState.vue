@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ApiError } from '~/types/api'
 
-defineProps<{ pending?: boolean, error?: ApiError | null, empty?: boolean }>()
+defineProps<{ pending?: boolean, error?: ApiError | null, empty?: boolean; retry?: () => void }>()
 </script>
 
 <template>
@@ -14,6 +14,7 @@ defineProps<{ pending?: boolean, error?: ApiError | null, empty?: boolean }>()
       <p>{{ error.message }}</p>
       <ul><li v-for="field in error.fields" :key="field.path">{{ field.path }}: {{ field.message }}</li></ul>
     </template>
+    <template v-if="retry" #actions><UButton color="neutral" variant="outline" @click="retry">Retry</UButton></template>
   </UAlert>
   <UEmpty v-else-if="empty" icon="i-lucide-inbox" title="Nothing to show yet" description="Enter quarter information to begin your estimate." />
   <slot v-else />

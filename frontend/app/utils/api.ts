@@ -1,4 +1,6 @@
-import type { ApiError, ApiErrorEnvelope, ApiValidationField, ApiWarning, BootstrapState, Cents } from '~/types/api'
+import type { ApiError, ApiErrorEnvelope, ApiValidationField, ApiWarning, BootstrapState, Cents, QuarterInput } from '~/types/api'
+import type { QuarterNumber } from '~/types/quarter'
+import { isQuarterResource } from '~/utils/quarter'
 
 type JsonRecord = Record<string, unknown>
 
@@ -89,5 +91,10 @@ export function createApiClient(apiBase: string, fetcher: ApiFetcher) {
     }
   }
 
-  return { getBootstrap: () => request('/2026', isBootstrapState), request }
+  return {
+    getBootstrap: () => request('/2026', isBootstrapState),
+    getQuarter: (quarter: QuarterNumber) => request(`/2026/quarters/${quarter}`, isQuarterResource),
+    saveQuarter: (quarter: QuarterNumber, input: QuarterInput) => request(`/2026/quarters/${quarter}`, isQuarterResource, { method: 'PUT', body: input }),
+    request
+  }
 }
