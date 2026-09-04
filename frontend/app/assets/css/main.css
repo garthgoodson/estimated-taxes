@@ -4,3 +4,6 @@
 :root {
   color-scheme: dark;
 }
+
+html, body, #__nuxt { min-height: 100%; }
+body { background: var(--ui-bg); color: var(--ui-text); }

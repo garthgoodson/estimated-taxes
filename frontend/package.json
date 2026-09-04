@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
+    "test": "vitest run",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
@@ -17,8 +18,12 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/test-utils": "^2.5.0",
     "eslint": "^10.4.0",
+    "happy-dom": "^20.14.0",
     "typescript": "^5.9.0",
+    "vitest": "^5.0.0",
     "vue-tsc": "^3.2.0"
   },
   "packageManager": "pnpm@10.29.3",
