@@ -1,17 +1,13 @@
 <script setup lang="ts">
+import { navigationItems } from '~/utils/navigation'
+
 const bootstrap = useBootstrap()
-const quarterLink = computed(() => `/quarters/${bootstrap.state.value?.current_quarter ?? 1}`)
 
 onMounted(() => {
   if (!bootstrap.state.value && !bootstrap.pending.value) void bootstrap.load()
 })
 
-const items = computed(() => [
-  { label: 'Home', icon: 'i-lucide-house', to: '/' },
-  { label: 'Quarters', icon: 'i-lucide-calendar-days', to: quarterLink.value },
-  { label: 'History', icon: 'i-lucide-history', to: '/history' },
-  { label: 'Settings', icon: 'i-lucide-settings', to: '/settings' }
-])
+const items = computed(() => navigationItems(bootstrap.state.value?.current_quarter))
 </script>
 
 <template>

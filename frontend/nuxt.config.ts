@@ -1,5 +1,4 @@
 const backendOrigin = process.env.NUXT_BACKEND_ORIGIN || 'http://127.0.0.1:8080'
-const backendUrl = process.env.NUXT_PUBLIC_API_BASE || `${backendOrigin}/api`
 
 export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@nuxt/ui'],
@@ -11,7 +10,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBase: import.meta.dev ? '/api' : backendUrl
+      apiBase: '/api'
     }
   },
   nitro: {

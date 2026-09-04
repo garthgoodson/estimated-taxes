@@ -8,5 +8,7 @@ describe('quarter routes', () => {
     expect(validQuarter('0')).toBeNull()
     expect(validQuarter('5')).toBeNull()
     expect(validQuarter('Q1')).toBeNull()
+    expect(validQuarter('1.0')).toBeNull()
+    expect(validQuarter(['1', '2'])).toBeNull()
   })
 })
