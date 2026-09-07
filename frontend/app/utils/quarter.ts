@@ -50,7 +50,7 @@ export function isQuarterResource(value: unknown): value is QuarterResource {
 }
 
 export function cloneQuarterForm(value: QuarterForm): QuarterForm { return structuredClone(value) }
-function sameValue(left: unknown, right: unknown): boolean {
+export function sameValue(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true
   if (Array.isArray(left) && Array.isArray(right)) return left.length === right.length && left.every((value, index) => sameValue(value, right[index]))
   if (record(left) && record(right)) {

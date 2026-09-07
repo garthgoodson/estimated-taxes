@@ -1,9 +1,9 @@
 #include "estimated_taxes/recommendations.hpp"
 
 #include <array>
-#include <functional>
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 using namespace estimated_taxes;
 namespace {
@@ -34,4 +34,28 @@ void payment_boundaries_and_validation(){ auto active=rules(); auto in=inputs();
 }
 void composition(){ auto active=rules(); auto in=inputs(); Household household; const auto result=compose_current_result(household,in,"2026-03-31",active); require(result.as_of_date=="2026-03-31"&&result.recommendations.federal.rule_revision_id==active.federal.id&&result.recommendations.california.rule_revision_id==active.california.id,"composed result retains all stages"); }
 }
-int main(){const std::array tests{std::pair{"schedules",schedules_and_rounding},std::pair{"states",payments_states_and_dates},std::pair{"overpayment",overpayment_and_independence},std::pair{"validation",insufficient_and_invalid_payment},std::pair{"targets and outlook",targets_outlook_and_california_q3},std::pair{"payment boundaries",payment_boundaries_and_validation},std::pair{"composition",composition}};int failures{};for(auto [n,t]:tests)try{t();std::cout<<"PASS: "<<n<<'\n';}catch(const std::exception&e){++failures;std::cerr<<"FAIL: "<<n<<": "<<e.what()<<'\n';}return failures;}
+int main()
+{
+  using TestCase = std::pair<const char*, void (*)()>;
+  const std::array<TestCase, 7> tests{{
+    {"schedules", schedules_and_rounding},
+    {"states", payments_states_and_dates},
+    {"overpayment", overpayment_and_independence},
+    {"validation", insufficient_and_invalid_payment},
+    {"targets and outlook", targets_outlook_and_california_q3},
+    {"payment boundaries", payment_boundaries_and_validation},
+    {"composition", composition},
+  }};
+
+  int failures{};
+  for (const auto& [name, test] : tests) {
+    try {
+      test();
+      std::cout << "PASS: " << name << '\n';
+    } catch (const std::exception& error) {
+      ++failures;
+      std::cerr << "FAIL: " << name << ": " << error.what() << '\n';
+    }
+  }
+  return failures;
+}

@@ -75,7 +75,7 @@ void bootstrap_and_complete_serialization()
 {
   const std::string path = database_path();
   FixedClock clock("2026-03-31");
-  ApiApplication app(path, clock);
+  ApiApplication app(path, path + ".backups", clock);
   const ApiResponse bootstrap = app.handle({"GET", "/api/2026", {}, {}});
   require(bootstrap.status == 200 && clock.calls == 1, "bootstrap resolves fixed clock once");
   Json bootstrap_json(bootstrap.body);
@@ -104,7 +104,7 @@ void quarter_strictness_validation_and_rollback()
 {
   const std::string path = database_path();
   FixedClock clock("2026-03-31");
-  ApiApplication app(path, clock);
+  ApiApplication app(path, path + ".backups", clock);
   const std::string investment =
       "{\"ordinary_dividends_cents\":100,\"qualified_dividends_cents\":50,\"short_term_gain_cents\":-25,"
       "\"long_term_gain_cents\":200,\"federal_withholding_cents\":3,\"california_withholding_cents\":2,\"notes\":null}";
@@ -140,7 +140,7 @@ void household_rules_and_snapshots()
 {
   const std::string path = database_path();
   FixedClock clock("2026-03-31");
-  ApiApplication app(path, clock);
+  ApiApplication app(path, path + ".backups", clock);
   const std::string household =
       "{\"tax_year\":2026,\"filing_status\":\"married_filing_jointly\",\"residency\":\"california_full_year\","
       "\"spouses\":[{\"key\":\"spouse_1\",\"label\":\"Alex\",\"age_65_or_older\":false,\"blind\":false},"
@@ -210,7 +210,7 @@ void backup_restore_and_failed_restore_atomicity()
 {
   const std::string path = database_path();
   FixedClock clock("2026-03-31");
-  ApiApplication app(path, clock);
+  ApiApplication app(path, path + ".backups", clock);
   const std::string original =
       "{\"tax_year\":2026,\"filing_status\":\"married_filing_jointly\",\"residency\":\"california_full_year\","
       "\"spouses\":[{\"key\":\"spouse_1\",\"label\":\"Before\",\"age_65_or_older\":false,\"blind\":false},"
@@ -218,6 +218,12 @@ void backup_restore_and_failed_restore_atomicity()
   require(app.handle(json_request("PUT", "/api/2026/household", original)).status == 200, "prepare backup state");
   const ApiResponse backup = app.handle({"GET", "/api/backup", {}, {}});
   require(backup.status == 200 && backup.body.starts_with("SQLite format 3"), "complete SQLite backup returned");
+  const std::filesystem::path backup_directory = path + ".backups";
+  std::size_t archived{};
+  for (const auto& entry : std::filesystem::directory_iterator(backup_directory)) {
+    if (entry.path().extension() == ".sqlite") ++archived;
+  }
+  require(archived == 1, "complete SQLite backup archived");
 
   std::string changed = original;
   changed.replace(changed.find("Before"), 6, "After");

@@ -23,11 +23,12 @@ struct ApiResponse {
 
 class ApiApplication {
 public:
-  ApiApplication(std::string database_path, const CurrentDateProvider& clock);
+  ApiApplication(std::string database_path, std::string backup_directory, const CurrentDateProvider& clock);
   [[nodiscard]] ApiResponse handle(const ApiRequest& request) const;
 
 private:
   std::string database_path_;
+  std::string backup_directory_;
   const CurrentDateProvider& clock_;
 };
 

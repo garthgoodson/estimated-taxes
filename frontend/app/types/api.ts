@@ -93,6 +93,42 @@ export interface QuarterInput {
   payments: Record<Jurisdiction, { amount_cents: Cents; date: IsoDate | null }>
 }
 
+export interface SnapshotSummary {
+  id: string
+  label: string
+  as_of_date: IsoDate
+}
+
+export interface SnapshotDetail extends SnapshotSummary {
+  current_result: {
+    recommendations: Record<Jurisdiction, { recommended_payment_cents: Cents | null }>
+  }
+}
+
+export interface HouseholdResource {
+  tax_year: 2026
+  filing_status: 'married_filing_jointly'
+  residency: 'california_full_year'
+  spouses: Array<{
+    key: 'spouse_1' | 'spouse_2'
+    label: string
+    age_65_or_older: boolean
+    blind: boolean
+  }>
+}
+
+export type TaxRulesResource = Record<Jurisdiction, Record<string, unknown>>
+
+export interface HouseholdWriteResponse {
+  household: HouseholdResource
+  current_result: Record<string, unknown>
+}
+
+export interface TaxRulesWriteResponse {
+  rules: TaxRulesResource
+  current_result: Record<string, unknown>
+}
+
 export interface ApiError {
   kind: 'validation' | 'backend' | 'transport' | 'malformed_response'
   status?: number

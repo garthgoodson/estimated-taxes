@@ -18,8 +18,8 @@ describe('quarter editor workflow', () => {
     const editor = createQuarterEditor(client, 3); await editor.load()
     editor.form.value.payments.federal.amount_cents = 123; expect(editor.dirty.value).toBe(true)
     const first = editor.save(); const second = editor.save(); expect(client.saveQuarter).toHaveBeenCalledTimes(1)
-    resolve({ ...response, input: { ...response.input, payments: { ...response.input.payments, federal: { amount_cents: 123, date: null } } } }); await Promise.all([first, second])
-    expect(editor.dirty.value).toBe(false); expect(editor.saved.value).toBe(true)
+    resolve({ ...response, input: { ...response.input, payments: { ...response.input.payments, federal: { amount_cents: 123, date: null } } } }); const [saved] = await Promise.all([first, second])
+    expect(saved).toBe(true); expect(editor.dirty.value).toBe(false); expect(editor.saved.value).toBe(true)
   })
   it('retains edits and exposes backend validation after a failed save', async () => {
     const client = { getQuarter: vi.fn().mockResolvedValue(response), saveQuarter: vi.fn().mockRejectedValue({ kind: 'validation', code: 'invalid', message: 'Invalid', fields: [{ path: 'investments.qualified_dividends_cents', code: 'bad', message: 'Too high' }] }) }

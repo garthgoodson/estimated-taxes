@@ -18,17 +18,34 @@ cmake -S . -B build -G "Unix Makefiles"
 cmake --build build
 ```
 
-Run the loopback-only backend (defaults to `127.0.0.1:8080` and `estimated-taxes.sqlite`):
+Run the loopback-only backend (defaults to `127.0.0.1:8080` and `~/.fi-estaxes/estimated-taxes.sqlite`):
 
 ```sh
 ./build/backend/estimated_taxes_backend
 ```
 
-Override the port or database location when needed:
+On its first run, the backend creates this local data layout:
+
+```text
+~/.fi-estaxes/
+├── estimated-taxes.sqlite
+├── settings.json
+└── backups/
+```
+
+`settings.json` contains the persisted listen port and may be edited while the backend is stopped:
+
+```json
+{ "port": 8080 }
+```
+
+The port must be an integer from 1 through 65535. Invalid settings prevent startup. `--port` overrides the saved port for that run only; `--database` uses a different database without moving the local settings or backup archive:
 
 ```sh
 ./build/backend/estimated_taxes_backend --port 9080 --database /path/to/estimated-taxes.sqlite
 ```
+
+Each downloaded SQLite backup is also archived as a timestamped `.sqlite` file in `~/.fi-estaxes/backups/`. Backup retention is managed outside the application.
 
 Run its tests:
 
@@ -58,6 +75,12 @@ Build and preview the production output:
 ```sh
 pnpm build
 pnpm preview
+```
+
+The built Nitro server proxies same-origin `/api` requests to the backend at `http://127.0.0.1:8080` by default. To use a backend on another loopback port, set its runtime origin when starting the preview server:
+
+```sh
+NUXT_BACKEND_ORIGIN=http://127.0.0.1:9080 pnpm preview
 ```
 
 The backend and frontend are independent projects. CMake does not install frontend dependencies or run the Nuxt build.

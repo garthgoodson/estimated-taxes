@@ -13,7 +13,7 @@ export function createQuarterEditor(client: QuarterClient, quarter: QuarterNumbe
   const dirty = computed(() => !sameQuarterForm(form.value, baseline.value))
   function replace(value: QuarterResource) { resource.value = value; form.value = cloneQuarterForm(value.input); baseline.value = cloneQuarterForm(value.input); validationErrors.value = []; saved.value = true }
   async function load() { pending.value = true; error.value = null; saved.value = false; try { replace(await client.getQuarter(quarter)); saved.value = false } catch (cause) { error.value = cause as ApiError } finally { pending.value = false } }
-  async function save() { if (saving.value) return; saving.value = true; error.value = null; validationErrors.value = []; saved.value = false; try { replace(await client.saveQuarter(quarter, form.value)) } catch (cause) { error.value = cause as ApiError; if (error.value.kind === 'validation') validationErrors.value = error.value.fields } finally { saving.value = false } }
+  async function save(): Promise<boolean> { if (saving.value) return false; saving.value = true; error.value = null; validationErrors.value = []; saved.value = false; try { replace(await client.saveQuarter(quarter, form.value)); return true } catch (cause) { error.value = cause as ApiError; if (error.value.kind === 'validation') validationErrors.value = error.value.fields; return false } finally { saving.value = false } }
   return { resource, form, pending, saving, error, validationErrors, saved, dirty, load, save }
 }
 export function useQuarterEditor(quarter: QuarterNumber) { return createQuarterEditor(useApi(), quarter) }

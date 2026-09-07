@@ -10,7 +10,7 @@ int main(int argc, const char* const argv[])
   try {
     const auto configuration = estimated_taxes::http::listener_configuration(argc, argv);
     estimated_taxes::LocalCurrentDateProvider clock;
-    estimated_taxes::ApiApplication application(configuration.database_path, clock);
+    estimated_taxes::ApiApplication application(configuration.database_path, configuration.backup_directory, clock);
     if (application.handle({"GET", "/api/2026", {}, {}}).status != 200) {
       throw std::runtime_error("initial calculation failed");
     }

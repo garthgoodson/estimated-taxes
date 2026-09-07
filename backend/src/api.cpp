@@ -917,8 +917,8 @@ ApiResponse quarter_resource(const QuarterInput& input, const CurrentResult& res
 
 }  // namespace
 
-ApiApplication::ApiApplication(std::string database_path, const CurrentDateProvider& clock)
-    : database_path_(std::move(database_path)), clock_(clock)
+ApiApplication::ApiApplication(std::string database_path, std::string backup_directory, const CurrentDateProvider& clock)
+    : database_path_(std::move(database_path)), backup_directory_(std::move(backup_directory)), clock_(clock)
 {
   InputStore inputs(database_path_);
   RuleStore rules(database_path_);
@@ -1085,7 +1085,7 @@ ApiResponse ApiApplication::handle(const ApiRequest& request) const
     if (request.method == "GET" && request.path == "/api/backup") {
       return {200, {{"Content-Type", "application/vnd.sqlite3"},
                     {"Content-Disposition", "attachment; filename=estimated-taxes-2026.sqlite"}},
-              backup_database(database_path_)};
+              backup_database(database_path_, backup_directory_)};
     }
     if (request.method == "POST" && request.path == "/api/restore") {
       const std::string as_of_date = clock_.current_date();

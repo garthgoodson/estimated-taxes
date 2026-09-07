@@ -5,7 +5,7 @@ target_compile_features(estimated_taxes_storage_tests PRIVATE cxx_std_20)
 target_link_libraries(estimated_taxes_storage_tests
   PRIVATE
     estimated_taxes_storage
-    SQLite::SQLite3
+    SQLite3::SQLite3
 )
 
 add_test(
@@ -28,7 +28,7 @@ add_executable(estimated_taxes_rule_tests
   tax_rules_tests.cpp
 )
 target_compile_features(estimated_taxes_rule_tests PRIVATE cxx_std_20)
-target_link_libraries(estimated_taxes_rule_tests PRIVATE estimated_taxes_storage SQLite::SQLite3)
+target_link_libraries(estimated_taxes_rule_tests PRIVATE estimated_taxes_storage SQLite3::SQLite3)
 add_test(
   NAME backend_rule_tests
   COMMAND estimated_taxes_rule_tests
@@ -46,7 +46,7 @@ add_test(NAME backend_recommendation_tests COMMAND estimated_taxes_recommendatio
 
 add_executable(estimated_taxes_snapshot_tests snapshot_tests.cpp)
 target_compile_features(estimated_taxes_snapshot_tests PRIVATE cxx_std_20)
-target_link_libraries(estimated_taxes_snapshot_tests PRIVATE estimated_taxes_storage SQLite::SQLite3)
+target_link_libraries(estimated_taxes_snapshot_tests PRIVATE estimated_taxes_storage SQLite3::SQLite3)
 add_test(NAME backend_snapshot_tests COMMAND estimated_taxes_snapshot_tests)
 
 add_executable(estimated_taxes_http_server_tests http_server_tests.cpp)

@@ -8,15 +8,18 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <array>
 #include <cerrno>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 
 using namespace estimated_taxes;
 using namespace estimated_taxes::http;
@@ -34,16 +37,39 @@ void require(bool condition, const char* message)
 
 void configuration()
 {
+  const auto home = std::filesystem::temp_directory_path() / "estimated_taxes_http_configuration_test";
+  std::filesystem::remove_all(home);
+  const LocalStoragePaths paths = local_storage_paths(home);
   const char* defaults[] = {"backend"};
-  const auto standard = listener_configuration(1, defaults);
+  const auto standard = listener_configuration(1, defaults, paths);
   require(standard.bind_address == "127.0.0.1" && standard.port == 8080 &&
-              standard.database_path == "estimated-taxes.sqlite",
-          "loopback defaults");
-  const char* configured[] = {"backend", "--port", "9080", "--database", "/tmp/taxes.sqlite"};
-  const auto overridden = listener_configuration(5, configured);
-  require(overridden.bind_address == "127.0.0.1" && overridden.port == 9080 &&
-              overridden.database_path == "/tmp/taxes.sqlite",
-          "overrides remain loopback");
+              standard.database_path == paths.database_path.string() &&
+              std::filesystem::exists(paths.settings_path),
+          "local storage defaults");
+
+  std::ofstream settings(paths.settings_path, std::ios::trunc);
+  settings << "{\"port\": 9080}";
+  settings.close();
+  const auto stored = listener_configuration(1, defaults, paths);
+  require(stored.port == 9080, "stored settings port used");
+  const char* configured[] = {"backend", "--port", "9081", "--database", "/tmp/taxes.sqlite"};
+  const auto overridden = listener_configuration(5, configured, paths);
+  require(overridden.bind_address == "127.0.0.1" && overridden.port == 9081 &&
+              overridden.database_path == "/tmp/taxes.sqlite" &&
+              overridden.backup_directory == paths.backups_directory.string(),
+          "command-line overrides remain loopback");
+
+  settings.open(paths.settings_path, std::ios::trunc);
+  settings << "{}";
+  settings.close();
+  bool rejected{};
+  try {
+    (void)listener_configuration(1, defaults, paths);
+  } catch (const std::exception&) {
+    rejected = true;
+  }
+  require(rejected, "invalid settings rejected");
+  std::filesystem::remove_all(home);
 }
 
 int connect_with_retry(unsigned short port)
@@ -98,7 +124,7 @@ void listener_dispatches_to_application()
   if (child == 0) {
     try {
       FixedClock clock;
-      ApiApplication application(configuration.database_path, clock);
+      ApiApplication application(configuration.database_path, configuration.backup_directory, clock);
       server.run(application);
     } catch (...) {
       _exit(2);
@@ -143,9 +169,14 @@ void listener_dispatches_to_application()
 
 int main()
 {
+  using TestCase = std::pair<const char*, void (*)()>;
+  const std::array<TestCase, 2> tests{{
+    {"configuration", configuration},
+    {"listener dispatch", listener_dispatches_to_application},
+  }};
+
   int failures{};
-  for (const auto [name, test] : {std::pair{"configuration", configuration},
-                                  std::pair{"listener dispatch", listener_dispatches_to_application}}) {
+  for (const auto& [name, test] : tests) {
     try {
       test();
       std::cout << "PASS: " << name << '\n';

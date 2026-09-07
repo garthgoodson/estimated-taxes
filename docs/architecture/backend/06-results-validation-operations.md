@@ -96,6 +96,8 @@ Derived results are recalculated and never directly edited. The application orch
 
 All data remains local. Normal operation uses no network services.
 
+Default application data is stored under `~/.fi-estaxes/`: `estimated-taxes.sqlite` holds the complete application state, `settings.json` holds the backend listen port, and `backups/` holds complete timestamped SQLite backup archives. The backend creates the directory and default settings file on first startup. The saved port must be valid; `--port` overrides it for one run, while `--database` selects an alternate database without moving the settings or backup archive.
+
 The application has no login, roles, remote access, telemetry, or built-in database encryption. It relies on operating-system account and disk protection.
 
 ## Saving and correction
@@ -106,7 +108,7 @@ Correcting any quarter or active tax rule recalculates the current result. It do
 
 ## Backup and restore
 
-Backup creates a complete SQLite dump of application state.
+Backup creates a complete SQLite dump of application state, archives it under `~/.fi-estaxes/backups/`, and returns it for the user to download.
 
 Restore:
 

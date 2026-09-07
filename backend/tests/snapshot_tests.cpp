@@ -3,9 +3,11 @@
 
 #include <sqlite3.h>
 
+#include <array>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 using namespace estimated_taxes;
 namespace { void require(bool v,const char*m){if(!v)throw std::runtime_error(m);} ActiveRules rules(){auto f=official_federal_rules();auto c=official_california_rules();return {{1,Jurisdiction::federal,true,false,{},f,{}},{2,Jurisdiction::california,true,false,{},{},c},false,false};} CalculationSnapshot sample(const std::string&name){CalculationSnapshot s;s.name=name;s.as_of_date="2026-03-31";s.rules=rules();for(int i=0;i<4;++i)s.inputs.quarters[i].quarter=i+1;s.inputs.quarters[0].federal_payment={123,"2026-03-01"};s.taxes.federal.details.annual_liability_cents=1000;s.recommendations.federal.current_quarter=1;return s;} std::string path(){auto p=std::filesystem::temp_directory_path()/"estimated_taxes_snapshot_test.sqlite";std::filesystem::remove(p);return p.string();}
 void round_trip_operations(){const auto p=path();SnapshotStore store(p);auto first=store.save(sample("first"));auto second=store.save(sample("second"));require(store.list().size()==2,"list snapshots");auto loaded=store.load(first.id);require(loaded.name=="first"&&loaded.as_of_date=="2026-03-31"&&loaded.inputs.quarters[0].federal_payment.amount_cents==123&&loaded.rules.federal.federal==official_federal_rules(),"complete round trip");store.rename(first.id,"renamed");loaded=store.load(first.id);require(loaded.name=="renamed"&&loaded.inputs.quarters[0].federal_payment.amount_cents==123,"rename changes only name");
@@ -14,4 +16,24 @@ void round_trip_operations(){const auto p=path();SnapshotStore store(p);auto fir
 void migration_and_atomic_failure(){const auto p=path();{InputStore input(p);RuleStore rule(p);require(input.schema_version()==2,"prior schema");}SnapshotStore store(p);InputStore input(p);require(input.schema_version()==3,"snapshot migration");bool failed{};try{(void)store.save(sample(""));}catch(const ValidationError&){failed=true;}require(failed&&store.list().empty(),"failed snapshot validation leaves no row");sqlite3* database{};require(sqlite3_open(p.c_str(),&database)==SQLITE_OK,"open test database");require(sqlite3_exec(database,"CREATE TRIGGER fail_snapshot BEFORE INSERT ON calculation_snapshots BEGIN SELECT RAISE(ABORT, 'forced failure'); END",nullptr,nullptr,nullptr)==SQLITE_OK,"create failing trigger");sqlite3_close(database);failed=false;try{(void)store.save(sample("forced"));}catch(const StorageError&){failed=true;}require(failed&&store.list().empty(),"failed snapshot persistence rolls back");std::filesystem::remove(p);}
 void malformed_snapshot_is_rejected(){const auto p=path();SnapshotStore store(p);const auto saved=store.save(sample("saved"));sqlite3* database{};require(sqlite3_open(p.c_str(),&database)==SQLITE_OK,"open corrupt database");const std::string update="UPDATE calculation_snapshots SET payload='\"v1\" 1001' WHERE id="+std::to_string(saved.id);require(sqlite3_exec(database,update.c_str(),nullptr,nullptr,nullptr)==SQLITE_OK,"corrupt snapshot");sqlite3_close(database);bool failed{};try{(void)store.load(saved.id);}catch(const StorageError&){failed=true;}require(failed,"malformed snapshot is storage error");std::filesystem::remove(p);}
 }
-int main(){int failed{};for(auto [name,test]:{std::pair{"round trip",round_trip_operations},std::pair{"migration",migration_and_atomic_failure},std::pair{"malformed",malformed_snapshot_is_rejected}})try{test();std::cout<<"PASS: "<<name<<'\n';}catch(const std::exception&e){++failed;std::cerr<<"FAIL: "<<name<<": "<<e.what()<<'\n';}return failed;}
+int main()
+{
+  using TestCase = std::pair<const char*, void (*)()>;
+  const std::array<TestCase, 3> tests{{
+    {"round trip", round_trip_operations},
+    {"migration", migration_and_atomic_failure},
+    {"malformed", malformed_snapshot_is_rejected},
+  }};
+
+  int failures{};
+  for (const auto& [name, test] : tests) {
+    try {
+      test();
+      std::cout << "PASS: " << name << '\n';
+    } catch (const std::exception& error) {
+      ++failures;
+      std::cerr << "FAIL: " << name << ": " << error.what() << '\n';
+    }
+  }
+  return failures;
+}

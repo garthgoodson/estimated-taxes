@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createApiClient } from '~/utils/api'
-import { cloneQuarterForm, isQuarterResource, sameQuarterForm } from '~/utils/quarter'
+import { cloneQuarterForm, isQuarterResource, sameQuarterForm, sameValue } from '~/utils/quarter'
 import type { QuarterResource } from '~/types/quarter'
 
 export function resource(quarter: 1 | 2 | 3 | 4 = 3): QuarterResource {
@@ -27,6 +27,10 @@ describe('quarter API boundary', () => {
     expect(sameQuarterForm(form, cloneQuarterForm(form))).toBe(true)
     expect(sameQuarterForm(form, { ...form, payments: { ...form.payments, federal: { amount_cents: 0, date: '2026-09-01' } } })).toBe(false)
     expect(sameQuarterForm(form, { ...form, investments: { ...form.investments!, short_term_gain_cents: 25 } })).toBe(false)
+  })
+
+  it('compares equivalent object structures independently of key order', () => {
+    expect(sameValue({ federal: { rate_ppm: 100000 }, california: { rate_ppm: 90000 } }, { california: { rate_ppm: 90000 }, federal: { rate_ppm: 100000 } })).toBe(true)
   })
 
   it('rejects malformed complete-quarter responses', () => {

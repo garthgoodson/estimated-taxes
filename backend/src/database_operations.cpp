@@ -23,6 +23,14 @@ std::filesystem::path temporary_path_next_to(const std::filesystem::path& databa
   return database_path.string() + "." + std::to_string(nonce) + suffix;
 }
 
+std::filesystem::path archive_path(const std::filesystem::path& directory)
+{
+  const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+  const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+  return directory / ("estimated-taxes-" + std::to_string(timestamp) + "-" + std::to_string(nonce) + ".sqlite");
+}
+
 void copy_database(sqlite3* source, sqlite3* destination)
 {
   sqlite3_backup* backup = sqlite3_backup_init(destination, "main", source, "main");
@@ -68,15 +76,25 @@ private:
 
 }  // namespace
 
-std::string backup_database(const std::string& database_path)
+std::string backup_database(const std::string& database_path, const std::string& backup_directory)
 {
   const std::filesystem::path temporary = temporary_path_next_to(database_path, ".backup");
   RemoveOnExit cleanup(temporary);
-  sqlite::Connection source(database_path);
-  sqlite::Connection destination(temporary.string());
-  copy_database(source.get(), destination.get());
+  const std::filesystem::path directory(backup_directory);
+  std::error_code error;
+  std::filesystem::create_directories(directory, error);
+  if (error) throw StorageError("create backup directory failed");
+  const std::filesystem::path archive = archive_path(directory);
 
-  std::ifstream input(temporary, std::ios::binary);
+  {
+    sqlite::Connection source(database_path);
+    sqlite::Connection destination(temporary.string());
+    copy_database(source.get(), destination.get());
+  }
+  std::filesystem::rename(temporary, archive, error);
+  if (error) throw StorageError("archive completed backup failed");
+
+  std::ifstream input(archive, std::ios::binary);
   if (!input) throw StorageError("open completed backup failed");
   return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }

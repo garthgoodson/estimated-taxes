@@ -2,6 +2,7 @@
 
 #include "estimated_taxes/api.hpp"
 #include "estimated_taxes/input_store.hpp"
+#include "estimated_taxes/local_storage.hpp"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -238,7 +239,15 @@ void handle_connection(int socket, const ApiApplication& application)
 
 ListenerConfiguration listener_configuration(int argc, const char* const argv[])
 {
+  return listener_configuration(argc, argv, default_local_storage_paths());
+}
+
+ListenerConfiguration listener_configuration(int argc, const char* const argv[], const LocalStoragePaths& paths)
+{
   ListenerConfiguration configuration;
+  configuration.port = load_or_create_configured_port(paths);
+  configuration.database_path = paths.database_path.string();
+  configuration.backup_directory = paths.backups_directory.string();
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument(argv[index]);
     if (argument == "--port") {

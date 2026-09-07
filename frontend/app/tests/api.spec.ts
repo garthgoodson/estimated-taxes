@@ -36,4 +36,16 @@ describe('API boundaries', () => {
     expect(isBootstrapState({ ...bootstrap, tax: {} })).toBe(false)
     expect(isBootstrapState({ ...bootstrap, warnings: [{ severity: 'informational', code: 'x', message: 'x' }] })).toBe(false)
   })
+
+  it('uses canonical Settings write responses and rejects malformed ones', async () => {
+    const household = { tax_year: 2026 as const, filing_status: 'married_filing_jointly' as const, residency: 'california_full_year' as const, spouses: [{ key: 'spouse_1' as const, label: 'One', age_65_or_older: false, blind: false }, { key: 'spouse_2' as const, label: 'Two', age_65_or_older: false, blind: false }] }
+    const current_result = { as_of_date: '2026-09-02', projection: {}, tax: {}, recommendations: {} }
+    const client = createApiClient('/api', vi.fn().mockResolvedValue({ household, current_result }))
+    await expect(client.saveHousehold(household)).resolves.toMatchObject({ household })
+    await expect(createApiClient('/api', vi.fn().mockResolvedValue({ household })).saveHousehold(household)).rejects.toMatchObject({ kind: 'malformed_response' })
+
+    const rules = { federal: {}, california: {} }
+    await expect(createApiClient('/api', vi.fn().mockResolvedValue({ rules, current_result })).saveTaxRules(rules)).resolves.toMatchObject({ rules })
+    await expect(createApiClient('/api', vi.fn().mockResolvedValue({ current_result })).restoreTaxRules({ jurisdiction: 'federal', source: 'official' })).rejects.toMatchObject({ kind: 'malformed_response' })
+  })
 })

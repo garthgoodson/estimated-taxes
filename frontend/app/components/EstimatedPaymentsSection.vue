@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ApiValidationField, Jurisdiction, QuarterInput } from '~/types/api'
 import type { Recommendation } from '~/types/quarter'
+// The quarter response does not provide a scheduled percentage; do not derive one from tax rules.
 const props = defineProps<{ modelValue: QuarterInput['payments']; recommendations: Record<Jurisdiction, Recommendation>; errors: ApiValidationField[] }>()
 const emit = defineEmits<{ 'update:modelValue': [value: QuarterInput['payments']] }>()
 function update(jurisdiction: Jurisdiction, field: 'amount_cents' | 'date', value: number | string | null) { emit('update:modelValue', { ...props.modelValue, [jurisdiction]: { ...props.modelValue[jurisdiction], [field]: value } }) }

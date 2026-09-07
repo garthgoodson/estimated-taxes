@@ -1,5 +1,7 @@
 #pragma once
 
+#include "estimated_taxes/local_storage.hpp"
+
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -16,10 +18,13 @@ constexpr std::size_t kMaximumRestoreBodyBytes = 64U * 1024U * 1024U;
 struct ListenerConfiguration {
   std::string bind_address{"127.0.0.1"};
   unsigned short port{8080};
-  std::string database_path{"estimated-taxes.sqlite"};
+  std::string database_path;
+  std::string backup_directory;
 };
 
 [[nodiscard]] ListenerConfiguration listener_configuration(int argc, const char* const argv[]);
+[[nodiscard]] ListenerConfiguration listener_configuration(int argc, const char* const argv[],
+                                                            const LocalStoragePaths& paths);
 
 class HttpServer {
 public:

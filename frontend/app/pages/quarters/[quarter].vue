@@ -23,6 +23,10 @@ function relatedErrors(prefix: string): ApiValidationField[] {
 
 const beforeUnload = (event: BeforeUnloadEvent) => protectBeforeUnload(editor.dirty.value, event)
 
+async function save() {
+  if (await editor.save()) await bootstrap.load()
+}
+
 onBeforeRouteLeave(() => confirmDiscard(editor.dirty.value, () => window.confirm('Discard unsaved quarter changes?')))
 onMounted(() => {
   void editor.load()
@@ -36,13 +40,13 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload))
     <div v-if="editor.resource.value" class="quarter-page">
       <header class="quarter-header">
         <div><p class="eyebrow">{{ periodLabel }}</p><h1>Quarter {{ quarter }}</h1><p>{{ quarterDateRange(quarter ?? 1) }} · As of {{ editor.resource.value.result.as_of_date }} · {{ quarterSummary?.status.replace('_', ' ') ?? 'Loading status' }}</p></div>
-        <div class="save-state"><span v-if="editor.saved.value">Saved</span><span v-else-if="editor.dirty.value">Unsaved changes</span><span v-else>Saved version</span><UButton :loading="editor.saving.value" :disabled="editor.saving.value || !editor.dirty.value" @click="editor.save">Save quarter</UButton></div>
+        <div class="save-state"><span v-if="editor.saved.value">Saved</span><span v-else-if="editor.dirty.value">Unsaved changes</span><span v-else>Saved version</span><UButton :loading="editor.saving.value" :disabled="editor.saving.value || !editor.dirty.value" @click="save">Save quarter</UButton></div>
       </header>
 
       <section class="recommendations" aria-label="Estimated taxes owed"><QuarterRecommendationSummary jurisdiction="federal" :recommendation="editor.resource.value.result.current_recommendations.federal" /><QuarterRecommendationSummary jurisdiction="california" :recommendation="editor.resource.value.result.current_recommendations.california" /></section>
       <UAlert v-for="outcome in editor.resource.value.result.current_recommendations.validation" :key="outcome.code" :color="outcome.severity === 'blocking' ? 'error' : outcome.severity === 'caution' ? 'warning' : 'info'" :title="outcome.jurisdiction ? `${outcome.jurisdiction === 'federal' ? 'Federal' : 'California'} recommendation` : 'Recommendation notice'" :description="outcome.message" />
       <UAlert v-if="editor.validationErrors.value.length" color="error" title="Review the highlighted quarter entries"><template #description><ul><li v-for="error in editor.validationErrors.value" :key="error.path">{{ error.message }}</li></ul></template></UAlert>
-      <UAlert v-else-if="editor.error.value" color="error" title="Quarter was not saved" :description="editor.error.value.message"><template #actions><UButton color="neutral" variant="outline" @click="editor.save">Retry save</UButton></template></UAlert>
+      <UAlert v-else-if="editor.error.value" color="error" title="Quarter was not saved" :description="editor.error.value.message"><template #actions><UButton color="neutral" variant="outline" @click="save">Retry save</UButton></template></UAlert>
 
       <PaystubSection v-model="editor.form.value.paystubs.spouse_1" spouse="spouse_1" label="Spouse 1" :warnings="relatedWarnings('paystubs.spouse_1')" :errors="relatedErrors('paystubs.spouse_1')" />
       <PaystubSection v-model="editor.form.value.paystubs.spouse_2" spouse="spouse_2" label="Spouse 2" :warnings="relatedWarnings('paystubs.spouse_2')" :errors="relatedErrors('paystubs.spouse_2')" />

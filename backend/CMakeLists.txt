@@ -1,10 +1,15 @@
 find_package(SQLite3 REQUIRED)
+if(NOT TARGET SQLite3::SQLite3)
+  add_library(SQLite3::SQLite3 ALIAS SQLite::SQLite3)
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(JANSSON REQUIRED IMPORTED_TARGET jansson)
 
 add_library(estimated_taxes_storage
   src/sqlite.cpp
   src/current_date_provider.cpp
+  src/local_storage.cpp
   src/http_server.cpp
   src/api.cpp
   src/database_operations.cpp
@@ -22,7 +27,7 @@ target_include_directories(estimated_taxes_storage
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_link_libraries(estimated_taxes_storage PRIVATE SQLite::SQLite3 PkgConfig::JANSSON)
+target_link_libraries(estimated_taxes_storage PRIVATE SQLite3::SQLite3 PkgConfig::JANSSON)
 target_compile_options(estimated_taxes_storage
   PRIVATE
     $<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>:-Wall;-Wextra;-Wpedantic>
