@@ -2,7 +2,7 @@
 
 ## Product definition
 
-The application is a local 2026 tax-planning tool for one married couple filing jointly as full-year California residents. It accepts quarterly payroll and investment information, estimates annual federal and California tax, and recommends the amount currently owed for each jurisdiction.
+The application is a local tax-planning tool for one married couple filing jointly as full-year California residents. The implemented MVP supports the 2026 case; approved future multi-year behavior is defined separately. It accepts quarterly payroll and investment information, estimates annual federal and California tax, and recommends the amount currently owed for each jurisdiction.
 
 The estimate may be imperfect. Simplicity, clarity, and explainability are more important than covering every tax situation.
 
@@ -20,7 +20,7 @@ The application runs locally. It has no login, remote services, automatic tax-ru
 
 ## Fixed product scope
 
-- Tax year 2026 only
+- One open tax year at a time; the implemented MVP opens 2026 only
 - Married filing jointly only
 - Full-year California residents only
 - Up to two spouses
@@ -73,6 +73,7 @@ Start with the [implementation milestones](implementation-milestones.md) for the
 5. [Quarterly payment recommendations](backend/05-payment-recommendations.md)
 6. [Results, validation, and local operations](backend/06-results-validation-operations.md)
 7. [Frontend/backend JSON API](backend/07-api-contract.md)
+8. [Multi-year tax cases](backend/08-multi-year-cases.md)
 
 The backend files are ordered by calculation flow. The implementation milestone plan defines delivery dependencies, including building rule management before the calculation that consumes those rules.
 

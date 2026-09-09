@@ -21,6 +21,29 @@ describe('quarter editor workflow', () => {
     resolve({ ...response, input: { ...response.input, payments: { ...response.input.payments, federal: { amount_cents: 123, date: null } } } }); const [saved] = await Promise.all([first, second])
     expect(saved).toBe(true); expect(editor.dirty.value).toBe(false); expect(editor.saved.value).toBe(true)
   })
+  it('ignores a stale quarter load after navigation', async () => {
+    let resolveStale!: (value: QuarterResource) => void
+    const stale = new Promise<QuarterResource>(resolve => { resolveStale = resolve })
+    const current = { ...response, quarter: 1 } as QuarterResource
+    const client = { getQuarter: vi.fn().mockReturnValueOnce(stale).mockResolvedValueOnce(current), saveQuarter: vi.fn() }
+    const editor = createQuarterEditor(client, 3)
+    const first = editor.load(3)
+    await editor.load(1)
+    resolveStale(response)
+    await first
+    expect(editor.resource.value).toEqual(current)
+  })
+
+  it('loads and saves a selected historic quarter through the same editor', async () => {
+    const client = { getQuarter: vi.fn().mockResolvedValue(response), saveQuarter: vi.fn().mockResolvedValue(response) }
+    const editor = createQuarterEditor(client, 3)
+    await editor.load(1)
+    editor.form.value.payments.federal.amount_cents = 456
+    await editor.save()
+    expect(client.getQuarter).toHaveBeenCalledWith(1)
+    expect(client.saveQuarter).toHaveBeenCalledWith(1, expect.objectContaining({ payments: expect.objectContaining({ federal: { amount_cents: 456, date: null } }) }))
+  })
+
   it('retains edits and exposes backend validation after a failed save', async () => {
     const client = { getQuarter: vi.fn().mockResolvedValue(response), saveQuarter: vi.fn().mockRejectedValue({ kind: 'validation', code: 'invalid', message: 'Invalid', fields: [{ path: 'investments.qualified_dividends_cents', code: 'bad', message: 'Too high' }] }) }
     const editor = createQuarterEditor(client, 3); await editor.load(); editor.form.value.payments.federal.amount_cents = 7; await editor.save()

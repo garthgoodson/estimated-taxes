@@ -4,7 +4,7 @@ import InvestmentSection from '~/components/InvestmentSection.vue'
 import PaystubSection from '~/components/PaystubSection.vue'
 
 const paystub = { date: '2026-06-01', pay_frequency: 'biweekly' as const, current_period_regular_wages_cents: 12345, current_period_bonus_wages_cents: 0, current_period_federal_withholding_cents: 100, current_period_california_withholding_cents: 50, federal_taxable_wages_ytd_cents: 123456, california_taxable_wages_ytd_cents: 123456, federal_withholding_ytd_cents: 1000, california_withholding_ytd_cents: 500, social_security_withholding_ytd_cents: 1, medicare_withholding_ytd_cents: 2, california_sdi_withholding_ytd_cents: 3 }
-const global = { stubs: { UCard: { template: '<section><slot name="header" /><slot /></section>' }, UFormField: { template: '<div><slot /></div>' }, UInput: true, USelect: true, UEmpty: { template: '<div><slot name="actions" /></div>' }, UButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' }, UAlert: true, WarningList: true, MoneyInput: { template: '<button class="money" @click="$emit(\'update:modelValue\', 999)"></button>' } } }
+const global = { stubs: { UCard: { template: '<section><slot name="header" /><slot /></section>' }, UFormField: { template: '<div><slot /></div>' }, UInput: true, USelect: true, UEmpty: { template: '<div><slot name="actions" /></div>' }, UButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' }, UAlert: true, WarningList: true, MoneyInput: { template: '<button class="money" @click="$emit(\'update:modelValue\', 999)">{{ label }}</button>', props: ['label'] } } }
 
 describe('F2 section state flow', () => {
   it('emits an immutable investment replacement and displays a precise backend error', async () => {
@@ -21,5 +21,10 @@ describe('F2 section state flow', () => {
     await first.find('.money').trigger('click')
     expect((first.emitted('update:modelValue')![0]![0] as typeof paystub).current_period_regular_wages_cents).toBe(999)
     expect(paystub.current_period_regular_wages_cents).toBe(12345)
+    expect(first.text()).toContain('Regular Wages')
+    expect(first.text()).toContain('Federal Taxable Wages')
+    expect(first.text()).toContain('California SDI Withholding')
+    expect(first.text()).not.toContain('Current Period')
+    expect(first.text()).not.toContain('YTD')
   })
 })

@@ -6,14 +6,16 @@ Define the supported tax case, the business concepts owned by the backend, and t
 
 ## Tax Year Case
 
-The central aggregate is one 2026 Tax Year Case containing:
+The central aggregate is a Tax Year Case containing:
 
-- One household
+- One copied household
 - One or two spouses
 - Four quarters
-- Federal and California tax rules
-- Current derived result
+- Federal and California tax rules for that exact year
+- Current derived result while open, or a protected closure snapshot while closed
 - Optional saved calculation snapshots
+
+The implemented MVP has one open 2026 case. Approved multi-year case lifecycle is defined in [Multi-year tax cases](08-multi-year-cases.md).
 
 The filing status is married filing jointly. The household is assumed to be a full-year California resident household.
 
@@ -111,7 +113,8 @@ Snapshots support save, view, rename, and delete only. They do not support compa
 
 ## Domain invariants
 
-- A case is always 2026, married filing jointly, and California resident.
+- A case is one exact tax year, married filing jointly, and California resident.
+- Exactly one case is open; closed cases are immutable and reference a protected closure snapshot.
 - A case has no more than two spouses.
 - A spouse has no more than one paystub snapshot per quarter.
 - Investments contain quarter-specific values.

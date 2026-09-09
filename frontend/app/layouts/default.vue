@@ -26,7 +26,7 @@ const items = computed(() => navigationItems(bootstrap.state.value?.current_quar
       <UDashboardNavbar title="Estimated Taxes">
         <template #leading><UDashboardSidebarToggle /></template>
       </UDashboardNavbar>
-      <main class="page-content">
+      <main class="page-content flex-1 overflow-y-auto">
         <ApplicationState :pending="bootstrap.pending.value" :error="bootstrap.error.value">
           <slot />
         </ApplicationState>

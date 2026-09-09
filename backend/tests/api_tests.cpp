@@ -49,6 +49,7 @@ std::string database_path()
   const auto path = std::filesystem::temp_directory_path() /
                     ("estimated_taxes_api_test_" + std::to_string(++sequence) + ".sqlite");
   std::filesystem::remove(path);
+  std::filesystem::remove_all(path.string() + ".backups");
   return path.string();
 }
 
@@ -238,6 +239,7 @@ void backup_restore_and_failed_restore_atomicity()
   require(app.handle({"GET", "/api/2026/household", {}, {}}).body.find("Before") != std::string::npos,
           "failed restore preserves current data");
   std::filesystem::remove(path);
+  std::filesystem::remove_all(path + ".backups");
 }
 
 }  // namespace

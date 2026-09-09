@@ -11,7 +11,7 @@ The structural baseline is the Nuxt UI Dashboard. The visual direction is a rest
 1. **Data before decoration:** amounts, labels, and status must be easier to notice than ornamental styling.
 2. **Dark but readable:** use charcoal and slate surfaces rather than pure black, with accessible text contrast.
 3. **Limited color:** reserve accent colors for actions, status, jurisdiction identity, and chart series.
-4. **Honest precision:** actual, projected, paid, and recommended values must always be distinguishable.
+4. **Honest precision:** actual, projected, paid, and recommended values must always be distinguishable through a nearby label or an unambiguous enclosing heading.
 5. **Consistent density:** forms and summaries should be compact enough for financial review without feeling crowded.
 6. **Reuse proven structure:** start with Nuxt UI components and dashboard patterns; add application components only when the same composition repeats.
 
@@ -44,7 +44,10 @@ Typography, spacing, border radius, focus rings, and shadows begin with Nuxt UI 
 - Use cards to group related information, not to decorate every number.
 - Give primary tax recommendations the strongest visual position on the Quarter page.
 - Use large numeric values sparingly for headline results.
-- Keep labels close to values and include jurisdiction, time period, and actual/projected meaning where ambiguity is possible.
+- Keep labels close to values and include jurisdiction, time period, and actual/projected meaning where ambiguity is possible. An enclosing subsection may supply shared context; do not repeat it in every child label.
+- Organize summaries by financial role. Use subsection headings for shared concepts, concise child labels for the differing dimension (for example, Federal and California), and low-contrast dividers between unlike groups.
+- Use a two-column metric grid for comparable Federal and California values. A group with four directly comparable investment metrics may use four columns on wide screens, then collapse to two and one columns.
+- Reserve a large amount treatment for one primary result per card. Supporting values use a consistent compact label/value treatment.
 - Use responsive stacking; do not create a separate mobile information architecture.
 
 ## Component policy
@@ -61,6 +64,16 @@ Create a shared application component only when it provides one of these:
 Likely shared application components include money input/display, metric summary, jurisdiction summary, warning list, quarter status, and calculation breakdown. Tax-specific components stay in this application.
 
 Avoid wrappers that merely rename one Nuxt UI component without adding shared behavior or meaning.
+
+Use Nuxt UI button `color` and `variant` props as the semantic button classifier. Layout classes may position a button but must not define its meaning. Destructive removal actions use the error outline treatment and sit on their own form row at natural width.
+
+## Summary and form patterns
+
+- A multi-jurisdiction recommendation has one shared section title. Each Federal or California card contains the jurisdiction heading, a muted outcome line, one aligned current-amount row, and a two-column supporting-details grid. A divider separates the current amount from supporting details.
+- Reuse meaningful group headings rather than repeating their wording in metric labels. For example, under **Tax withholding**, child labels are **Federal** and **California**, not repeated withholding phrases.
+- Empty states live inside their enclosing card without adding a second visible ring or border.
+- Form section headings establish shared context. Paystub labels therefore omit repeated **Current pay period** and **Year to date** wording, use title case, and preserve recognized acronyms such as **SDI**.
+- Spouse-facing headings use the saved household label, with the stable spouse key retained only for data mapping.
 
 ## Chart language
 

@@ -4,7 +4,7 @@
 
 Define the coarse-grained local API between the Nuxt frontend and C++ backend.
 
-The API follows the quarter-centered product model. It exposes whole business resources rather than individual getters and setters for every field. The backend listens only on loopback, defaulting to `127.0.0.1:8080`; a command-line port override may change the port but never the loopback bind address.
+The API follows the quarter-centered product model. It exposes whole business resources rather than individual getters and setters for every field. The implemented MVP serves the canonical 2026 paths; approved multi-year routing generalizes each tax-year-owned resource as `/api/{year}/...` while keeping `/api/2026/...` unchanged. The backend listens only on loopback, defaulting to `127.0.0.1:8080`; a command-line port override may change the port but never the loopback bind address.
 
 Implementation uses a small HTTP/1.1 loopback listener without an additional HTTP dependency. It accepts `Content-Length` and chunked request framing, closes each connection after its response, and intentionally omits general-purpose server features not needed by this local API.
 
@@ -149,29 +149,39 @@ Snapshot summaries are `{ "id": "1", "label": "Q3", "as_of_date": "2026-09-02" }
 
 | Method | Path | Responsibility |
 | --- | --- | --- |
-| `GET` | `/api/2026` | Home and application bootstrap data |
-| `GET` | `/api/2026/quarters/{quarter}` | Complete Quarter page resource |
-| `PUT` | `/api/2026/quarters/{quarter}` | Replace and recalculate a quarter |
-| `GET` | `/api/2026/household` | Household settings |
-| `PUT` | `/api/2026/household` | Replace household settings |
-| `GET` | `/api/2026/tax-rules` | Active rules, sources, and revision summaries |
-| `PUT` | `/api/2026/tax-rules` | Replace active federal and California rule values |
-| `POST` | `/api/2026/tax-rules/restore` | Restore official or archived rules |
-| `GET` | `/api/2026/snapshots` | Snapshot summaries |
-| `POST` | `/api/2026/snapshots` | Save the current calculation |
-| `GET` | `/api/2026/snapshots/{id}` | One saved snapshot |
-| `PUT` | `/api/2026/snapshots/{id}/metadata` | Replace editable snapshot metadata |
-| `DELETE` | `/api/2026/snapshots/{id}` | Delete one snapshot |
+| `GET` | `/api/years` | Available tax-year cases and their state |
+| `POST` | `/api/years/rollover` | Atomically close the open case and start its consecutive next year |
+| `GET` | `/api/{year}` | Home and application bootstrap data |
+| `GET` | `/api/{year}/quarters/{quarter}` | Complete Quarter page resource |
+| `PUT` | `/api/{year}/quarters/{quarter}` | Replace and recalculate a quarter in the open case |
+| `GET` | `/api/{year}/household` | Household settings |
+| `PUT` | `/api/{year}/household` | Replace household settings in the open case |
+| `GET` | `/api/{year}/tax-rules` | Active rules, sources, and revision summaries |
+| `PUT` | `/api/{year}/tax-rules` | Replace active federal and California rule values in the open case |
+| `POST` | `/api/{year}/tax-rules/restore` | Restore official or archived rules in the open case |
+| `GET` | `/api/{year}/snapshots` | Snapshot summaries |
+| `POST` | `/api/{year}/snapshots` | Save the current calculation in the open case |
+| `GET` | `/api/{year}/snapshots/{id}` | One saved snapshot |
+| `PUT` | `/api/{year}/snapshots/{id}/metadata` | Replace editable snapshot metadata in the open case |
+| `DELETE` | `/api/{year}/snapshots/{id}` | Delete one ordinary snapshot in the open case |
 | `GET` | `/api/backup` | Download a complete SQLite dump |
 | `POST` | `/api/restore` | Replace local data from a SQLite dump |
 
 There are no field-level endpoints such as `setDividend`, `setWithholding`, or `setFederalPayment`.
 
+## Tax-year cases
+
+`GET /api/years` returns every app-created case, ordered by tax year, with its `tax_year`, `state` (`open` or `closed`), and `closed_as_of_date` when applicable. It does not create or purge cases.
+
+`POST /api/years/rollover` has no client-selected target year. It atomically closes the one open case and creates only its consecutive next year as defined in [Multi-year tax cases](08-multi-year-cases.md). It returns the new open case bootstrap resource. Missing exact-year official baselines reject the operation without changing either case.
+
+A closed case accepts GET requests only. Any mutation to a year-owned resource returns the documented `409` error envelope with code `closed_tax_year`.
+
 ## Application bootstrap
 
-### `GET /api/2026`
+### `GET /api/{year}`
 
-Returns everything needed to render Home and the global quarter navigation.
+Returns everything needed to render Home and the global quarter navigation. `/api/2026` remains the canonical 2026 URL.
 
 ```json
 {
@@ -228,13 +238,13 @@ The example values illustrate shape only; they are not test fixtures or official
 
 ## Quarter resource
 
-### `GET /api/2026/quarters/{quarter}`
+### `GET /api/{year}/quarters/{quarter}`
 
 Returns the complete selected-quarter input plus the derived information needed by the Quarter page.
 
 Valid quarter path values are `1`, `2`, `3`, and `4`.
 
-### `PUT /api/2026/quarters/{quarter}`
+### `PUT /api/{year}/quarters/{quarter}`
 
 Replaces all editable inputs for the selected quarter.
 
@@ -310,7 +320,7 @@ A future calendar quarter accepts only its empty resource shape. Paystub, invest
 
 ## Household resource
 
-### `GET /api/2026/household`
+### `GET /api/{year}/household`
 
 Returns:
 
@@ -336,7 +346,7 @@ Returns:
 }
 ```
 
-### `PUT /api/2026/household`
+### `PUT /api/{year}/household`
 
 Replaces the complete household settings document. Tax year, filing status, and residency must remain the fixed MVP values.
 
@@ -344,7 +354,7 @@ A successful response returns the canonical saved household plus the refreshed a
 
 ## Tax-rule resource
 
-### `GET /api/2026/tax-rules`
+### `GET /api/{year}/tax-rules`
 
 Returns both active jurisdictions in one call:
 
@@ -392,7 +402,7 @@ Returns both active jurisdictions in one call:
 }
 ```
 
-### `PUT /api/2026/tax-rules`
+### `PUT /api/{year}/tax-rules`
 
 Replaces both active rule documents atomically. The body uses the same editable rule shape returned by `GET`; backend-owned revision metadata is ignored or rejected rather than accepted as user data.
 
@@ -429,7 +439,7 @@ Bracket and installment arrays use these shapes:
 
 The abbreviated values illustrate representation only. A saved rule set must contain complete contiguous brackets and all four installments.
 
-### `POST /api/2026/tax-rules/restore`
+### `POST /api/{year}/tax-rules/restore`
 
 Restore official values:
 
@@ -454,11 +464,11 @@ Restore creates a new active revision; it does not rewrite history.
 
 ## Snapshot resources
 
-### `GET /api/2026/snapshots`
+### `GET /api/{year}/snapshots`
 
 Returns snapshot summaries ordered newest first.
 
-### `POST /api/2026/snapshots`
+### `POST /api/{year}/snapshots`
 
 Saves the current calculation:
 
@@ -470,11 +480,11 @@ Saves the current calculation:
 
 Returns `201 Created` with the saved snapshot summary.
 
-### `GET /api/2026/snapshots/{id}`
+### `GET /api/{year}/snapshots/{id}`
 
 Returns the immutable saved inputs, rules, results, recommendations, warnings, and captured `as_of_date`; it does not recalculate the snapshot.
 
-### `PUT /api/2026/snapshots/{id}/metadata`
+### `PUT /api/{year}/snapshots/{id}/metadata`
 
 Replaces the editable metadata:
 
@@ -486,7 +496,7 @@ Replaces the editable metadata:
 
 The saved calculation content cannot be modified.
 
-### `DELETE /api/2026/snapshots/{id}`
+### `DELETE /api/{year}/snapshots/{id}`
 
 Deletes the selected snapshot and returns `204 No Content`.
 
@@ -535,6 +545,7 @@ Use these status codes:
 | `204` | Snapshot deleted |
 | `400` | Malformed JSON or unsupported request shape |
 | `404` | Resource not found |
+| `409` | Mutation rejected because the tax-year case is closed |
 | `413` | Restore payload is too large |
 | `415` | Unsupported content type |
 | `422` | Structurally valid request with domain-validation errors |
@@ -559,4 +570,4 @@ Unknown input fields should be rejected with `400` so frontend/backend contract 
 - Partial updates
 - Remote authentication or authorization
 - API-driven log management
-- Multiple API or tax-year versions in the MVP
+- Multiple API versions in the MVP

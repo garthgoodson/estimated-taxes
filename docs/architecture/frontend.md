@@ -21,7 +21,7 @@ The application has four primary areas:
 3. History
 4. Settings
 
-Q1-Q4 are directly accessible within Quarters, and the current quarter opens by default.
+Q1-Q4 are directly accessible within Quarters, and the open case's backend-provided current quarter opens by default. A visible Tax year selector distinguishes the selected tax year from its Q1-Q4 navigation; it remains visible but disabled when only the 2026 case exists.
 
 ## Home
 
@@ -38,28 +38,24 @@ Home is read-only and answers: "Where do we currently stand for 2026?"
 
 ### Actual earnings and investments so far
 
-- Federal and California taxable wages
-- Ordinary and qualified dividends
-- Net short-term gain/loss
-- Net long-term gain/loss
+- **Taxable wages:** Federal and California values form one full-width comparable pair.
+- **Investment activity:** ordinary dividends, qualified dividends, and net short- and long-term gains/losses form a four-column wide-screen grid.
+- A divider separates wages from investments; the investment grid collapses to two columns and then one on narrower screens.
 
 ### Taxes paid so far
 
-- Federal income-tax withholding
-- California income-tax withholding
-- Federal estimated payments
-- California estimated payments
+- **Tax withholding:** Federal and California values.
+- **Estimated payments:** Federal and California values.
 
-Withholding and estimated payments remain visually distinct.
+Withholding and estimated payments remain visually distinct; group headings carry the shared context, so child labels only name the jurisdiction.
 
 ### Annual projection
 
-- Projected annual wages
-- Recorded investment income
-- Projected federal and California taxable income
-- Projected annual liabilities
-- Projected full-year withholding
-- Remaining projected obligations
+- **Projected wages:** Federal and California values.
+- **Projected withholding:** Federal and California values.
+- **Projected tax position:** annual liability and remaining obligation groups, each with Federal and California values.
+
+A divider separates the projected tax position from projected wages and withholding.
 
 ### Quarter status
 
@@ -81,15 +77,15 @@ Current and historic quarters use the same page structure.
 
 ### 2. Estimated taxes owed
 
-Federal and California are shown side by side near the top:
+A shared **Estimated taxes owed** heading precedes side-by-side Federal and California cards. Each card has:
 
-- Cumulative target
-- Payments already recorded
-- Estimated amount currently owed
-- Due date
+- Jurisdiction heading
 - Paid, partially paid, due, catch-up, or no-payment-needed status
+- Aligned amount currently owed row
+- Cumulative target and payments recorded
+- Due date and due-date status
 
-This is the primary result on the current-quarter page.
+A divider separates the current amount from the supporting two-column details grid. This is the primary result on the current-quarter page.
 
 ### 3. Spouse paystub inputs
 
@@ -97,15 +93,10 @@ One repeated section for each spouse:
 
 - Paystub date
 - Pay frequency
-- Current-period regular wages
-- Current-period bonus wages or bonus tag
-- Federal taxable wages YTD
-- California taxable wages YTD
-- Federal income-tax withholding YTD
-- California income-tax withholding YTD
-- Other supported withholding
+- **Current pay period:** regular wages, bonus wages, Federal withholding, and California withholding
+- **Year to date:** Federal and California taxable wages, Federal and California withholding, Social Security withholding, Medicare withholding, and California SDI withholding
 
-There is no job setup or job selection.
+The saved spouse label appears in each paystub heading. Section headings supply time context, so individual field labels do not repeat “Current pay period” or “YTD”; labels use title case and preserve acronyms. There is no job setup or job selection.
 
 ### 4. Quarterly investments
 
@@ -129,12 +120,11 @@ The section also shows the jurisdiction's scheduled percentage and due date.
 
 ### 6. Updated annual position
 
-- Projected annual income
-- Recorded investment income
-- Projected federal and California liability
-- Projected withholding
-- Estimated payments recorded
-- Remaining annual obligations
+- **Income & investments:** projected wages and recorded dividend income
+- **Covered taxes:** projected withholding and estimated payments recorded
+- **Projected tax position:** Federal and California annual liability and remaining obligation
+
+Sections use low-contrast dividers and grouped Federal/California metric grids. The section heading supplies actual/projected/paid context, so amount suffixes do not repeat it.
 
 ### 7. Warnings
 
@@ -142,9 +132,9 @@ Warnings appear near the affected section. Broad calculation limitations appear 
 
 ## Historic quarters
 
-Historic quarters use the same layout and remain editable. Editing a historic quarter recalculates the current annual result and current-quarter recommendation.
+Historic quarters in the open case use the same layout and remain editable. Editing one recalculates the open case's current annual result and current-quarter recommendation.
 
-A historic quarter does not recreate its old recommendation. Saved snapshots preserve earlier calculation results when the user explicitly saved them.
+A historic quarter does not recreate its old recommendation. Closed tax-year cases are read-only and display their protected closure snapshot rather than recalculating.
 
 ## Calculation details
 
@@ -215,7 +205,7 @@ Q1-Q4 must not have separate implementations.
 - Separate job, income, investment, or payment pages
 - Job setup and future-income planning
 - Scenario analysis
-- Multiple households, years, states, or filing statuses
+- Multiple households, concurrent open years, states, or filing statuses
 - Trend charts
 - Configurable dashboard widgets
 - Tax forms

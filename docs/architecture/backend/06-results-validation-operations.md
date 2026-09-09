@@ -43,7 +43,7 @@ The displayed breakdown must reconcile with its headline result.
 
 Snapshots are created explicitly, not after every edit. A snapshot preserves its as-of date, inputs, projection, rules, federal and California results, recommendations, and warnings.
 
-The user may save, view, rename, and delete snapshots. There is no snapshot comparison, branching, or recalculation workflow.
+The user may save, view, rename, and delete ordinary snapshots. A closed tax-year case references one protected closure snapshot; it preserves the final result and cannot be renamed or deleted. There is no snapshot comparison, branching, or recalculation workflow.
 
 ## Validation severity
 
@@ -90,7 +90,7 @@ Explain normal behavior, such as California's zero-percent Q3 installment or a r
 - **Derived results:** projections, liabilities, and recommendations
 - **Immutable history:** saved snapshots and archived rule revisions
 
-Derived results are recalculated and never directly edited. The application orchestration layer obtains one local-calendar as-of date from its injectable clock at the beginning of an operation, then passes it explicitly through every date-sensitive validation and calculation stage. Domain calculations do not read the system clock. Tests use a fixed clock; production uses the host operating system's configured local timezone. Snapshot reads use the immutable captured as-of date and do not recalculate.
+Derived results for the open case are recalculated and never directly edited. Closed cases display their protected closure snapshot and are never recalculated. The application orchestration layer obtains one local-calendar as-of date from its injectable clock at the beginning of an operation, then passes it explicitly through every date-sensitive validation and calculation stage. Domain calculations do not read the system clock. Tests use a fixed clock; production uses the host operating system's configured local timezone. Snapshot reads use the immutable captured as-of date and do not recalculate.
 
 ## Local data and privacy
 
@@ -118,7 +118,7 @@ Restore:
 4. Leaves current data unchanged if validation or restore fails.
 5. Revalidates active rules and recalculates the current result.
 
-Restore is full replacement only. It does not merge databases or restore selected records.
+Restore is full replacement only. It does not merge databases or restore selected records. In a multi-year database, validation checks every tax-year case, its rules, snapshots, and closure reference before replacement.
 
 ## Logging
 

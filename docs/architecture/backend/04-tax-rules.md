@@ -2,13 +2,13 @@
 
 ## Responsibility
 
-Manage the editable 2026 federal and California values used by calculations while preserving official defaults and historical revisions.
+Manage editable federal and California values for one exact tax-year case while preserving official defaults and historical revisions.
 
 Rule data is stored in SQLite.
 
 ## Rule-set boundary
 
-A rule set is one complete revision for one jurisdiction and tax year. The application uses exactly one active federal revision and one active California revision.
+A rule set is one complete revision for one jurisdiction and tax year. Each tax-year case uses exactly one active federal revision and one active California revision. A case cannot exist without complete validated official baselines for its exact year; rules from another year must never be reused.
 
 The supported categories are limited to values used by the approved calculation scope.
 
@@ -63,7 +63,7 @@ There is no user-visible draft or activation workflow.
 - **Active revision:** values currently used by calculations, referenced once per jurisdiction
 - **Archived revision:** a previous active version retained for history
 
-The user edits the active settings form and selects Save. A valid save atomically creates new federal and California revisions and moves both active references. An invalid save leaves both active rules unchanged. Restoring either an official baseline or archived revision copies its values into a new active revision; it never reactivates or mutates the source revision. A rule set is customized when its calculation values differ from its jurisdiction's official baseline, regardless of its revision origin.
+For the open case, the user edits the active settings form and selects Save. A valid save atomically creates new federal and California revisions and moves both active references. An invalid save leaves both active rules unchanged. Restoring either an official baseline or archived revision copies its values into a new active revision; it never reactivates or mutates the source revision. A rule set is customized when its calculation values differ from its jurisdiction's official baseline, regardless of its revision origin.
 
 ## Validation
 

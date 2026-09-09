@@ -215,6 +215,25 @@ flowchart TD
 - Supported approximations and omitted situations appear as documented warnings.
 - All automated tests pass and no MVP exclusion has been implemented accidentally.
 
+## Future milestone: M2 Multi-year tax cases
+
+**Plans:** [Multi-year tax cases](backend/08-multi-year-cases.md), [Frontend architecture](frontend.md), [JSON API](backend/07-api-contract.md)
+
+**Depends on:** R1
+
+**Outcome:** The local application retains closed app-created tax years while allowing exactly one open tax year.
+
+**Completion gate:**
+
+- SQLite migration preserves the 2026 case without creating a synthetic prior case.
+- Every case owns exact-year household, inputs, rules, revisions, snapshots, and results.
+- Rollover atomically saves a protected closure snapshot, closes the current case, and creates only its consecutive next case when exact-year official baselines are installed.
+- Closed-case reads return the closure result without recalculation; all case mutations return `409 Conflict`.
+- `/api/2026` remains valid under generalized `/api/{year}` routing, and `/api/years` lists case state.
+- Complete backup/restore validates and preserves all cases.
+- Frontend tax-year navigation remains distinct from Q1-Q4 navigation and makes closed cases read-only.
+- Migration, rollover rollback, closed-case immutability, year-scoped API, and backup/restore tests pass.
+
 ## Choices intentionally left to the implementation agent
 
 The implementation agent may choose these mechanics as long as the documented behavior and standards remain intact:

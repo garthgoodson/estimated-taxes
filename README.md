@@ -9,6 +9,16 @@ Local C++ and Nuxt application for estimating 2026 federal and California quarte
 - Node.js 20.19 or newer
 - pnpm 10
 
+## Start both services
+
+From the repository root, build the backend and start both the backend and Nuxt development server:
+
+```sh
+./start.sh
+```
+
+Press Ctrl-C to stop both processes. The script reads the backend port from `~/.fi-estaxes/settings.json` and configures the frontend proxy to match.
+
 ## Backend
 
 Configure and build out of source:

@@ -9,20 +9,19 @@ const statusLabel = computed(() => props.recommendation.calculation_status === '
 
 <template>
   <UCard class="recommendation" :data-jurisdiction="jurisdiction">
-    <p class="eyebrow">{{ jurisdiction === 'federal' ? 'Federal' : 'California' }}</p>
-    <h2>Estimated taxes owed</h2>
+    <h3>{{ jurisdiction === 'federal' ? 'Federal' : 'California' }}</h3>
     <p class="status">{{ statusLabel }}</p>
-    <MetricSummary label="Amount currently owed" :amount="recommendation.recommended_payment_cents" meaning="recommended" />
+    <div class="current-amount"><span>Amount currently owed</span><MoneyDisplay :value="recommendation.recommended_payment_cents" /></div>
     <dl>
       <div><dt>Cumulative target</dt><dd><MoneyDisplay :value="recommendation.cumulative_target_cents" /></dd></div>
-      <div><dt>Payments already recorded</dt><dd><MoneyDisplay :value="recommendation.payments_credited_cents" meaning="paid" /></dd></div>
+      <div><dt>Payments recorded</dt><dd><MoneyDisplay :value="recommendation.payments_credited_cents" /></dd></div>
       <div><dt>Due date</dt><dd>{{ recommendation.due_date ?? 'Unavailable' }}</dd></div>
-      <div><dt>Due-date status</dt><dd>{{ recommendation.due_date_status?.replaceAll('_', ' ') ?? 'Unavailable' }}</dd></div>
-      <div v-if="recommendation.projected_overpayment"><dt>Projected overpayment</dt><dd><MoneyDisplay :value="recommendation.projected_overpayment_cents" meaning="projected" /></dd></div>
+      <div><dt>Status</dt><dd>{{ recommendation.due_date_status?.replaceAll('_', ' ') ?? 'Unavailable' }}</dd></div>
+      <div v-if="recommendation.projected_overpayment"><dt>Projected overpayment</dt><dd><MoneyDisplay :value="recommendation.projected_overpayment_cents" /></dd></div>
     </dl>
   </UCard>
 </template>
 
 <style scoped>
-.recommendation { display: grid; gap: .75rem; }.recommendation[data-jurisdiction='federal'] { border-top: 3px solid var(--ui-primary); }.recommendation[data-jurisdiction='california'] { border-top: 3px solid var(--ui-secondary); }.eyebrow, .status { color: var(--ui-text-muted); font-size: .875rem; margin: 0; }h2 { margin: 0; }dl { display: grid; gap: .5rem; margin: 0; }dl div { display: flex; justify-content: space-between; gap: 1rem; }dt { color: var(--ui-text-muted); }dd { margin: 0; text-align: right; }
+.recommendation { display: grid; gap: .75rem; }.recommendation[data-jurisdiction='federal'] { border-top: 3px solid var(--ui-primary); }.recommendation[data-jurisdiction='california'] { border-top: 3px solid var(--ui-secondary); }h3, .status { margin: 0; }h3 { font-size: 1.125rem; }.status { color: var(--ui-text-muted); font-size: .875rem; padding-top: .25rem; }.current-amount { align-items: baseline; border-bottom: 1px solid var(--ui-border); display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); padding-bottom: 1rem; }.current-amount span { color: var(--ui-text-muted); font-size: .875rem; }.current-amount :deep(.money-display) { font-size: 1.25rem; font-weight: 650; }dl { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding-top: 1rem; }dl div { display: grid; gap: .25rem; }dt { color: var(--ui-text-muted); font-size: .75rem; }dd { margin: 0; }@media (max-width: 400px) { .current-amount, dl { grid-template-columns: 1fr; } }
 </style>

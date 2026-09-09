@@ -20,37 +20,84 @@ const jurisdictions: Jurisdiction[] = ['federal', 'california']
 
     <UCard>
       <template #header><h2>Actual earnings and investments so far</h2></template>
-      <div class="metric-grid">
-        <MetricSummary label="Federal taxable wages" :amount="state.actuals.federal_wages_ytd_cents" meaning="actual" />
-        <MetricSummary label="California taxable wages" :amount="state.actuals.california_wages_ytd_cents" meaning="actual" />
-        <MetricSummary label="Ordinary dividends" :amount="state.actuals.ordinary_dividends_cents" meaning="actual" />
-        <MetricSummary label="Qualified dividends" :amount="state.actuals.qualified_dividends_cents" meaning="actual" />
-        <MetricSummary label="Net short-term gain/loss" :amount="state.actuals.short_term_gain_cents" meaning="actual" />
-        <MetricSummary label="Net long-term gain/loss" :amount="state.actuals.long_term_gain_cents" meaning="actual" />
+      <div class="earnings-groups">
+        <section class="metric-group" aria-labelledby="actual-wages-heading">
+          <h3 id="actual-wages-heading">Taxable wages</h3>
+          <div class="metric-grid">
+            <MetricSummary label="Federal" :amount="state.actuals.federal_wages_ytd_cents" />
+            <MetricSummary label="California" :amount="state.actuals.california_wages_ytd_cents" />
+          </div>
+        </section>
+        <section class="metric-group investment-group" aria-labelledby="investment-activity-heading">
+          <h3 id="investment-activity-heading">Investment activity</h3>
+          <div class="investment-grid">
+            <MetricSummary label="Ordinary dividends" :amount="state.actuals.ordinary_dividends_cents" />
+            <MetricSummary label="Qualified dividends" :amount="state.actuals.qualified_dividends_cents" />
+            <MetricSummary label="Net short-term gain/loss" :amount="state.actuals.short_term_gain_cents" />
+            <MetricSummary label="Net long-term gain/loss" :amount="state.actuals.long_term_gain_cents" />
+          </div>
+        </section>
       </div>
     </UCard>
 
     <UCard>
       <template #header><h2>Taxes paid so far</h2></template>
-      <div class="metric-grid">
-        <MetricSummary label="Federal income-tax withholding" :amount="state.actuals.federal_withholding_ytd_cents" meaning="paid" />
-        <MetricSummary label="California income-tax withholding" :amount="state.actuals.california_withholding_ytd_cents" meaning="paid" />
-        <MetricSummary label="Federal estimated payments" :amount="state.actuals.federal_estimated_payments_cents" meaning="paid" />
-        <MetricSummary label="California estimated payments" :amount="state.actuals.california_estimated_payments_cents" meaning="paid" />
+      <div class="metric-groups">
+        <section class="metric-group" aria-labelledby="withholding-heading">
+          <h3 id="withholding-heading">Tax withholding</h3>
+          <div class="metric-grid">
+            <MetricSummary label="Federal" :amount="state.actuals.federal_withholding_ytd_cents" />
+            <MetricSummary label="California" :amount="state.actuals.california_withholding_ytd_cents" />
+          </div>
+        </section>
+        <section class="metric-group" aria-labelledby="estimated-payments-heading">
+          <h3 id="estimated-payments-heading">Estimated payments</h3>
+          <div class="metric-grid">
+            <MetricSummary label="Federal" :amount="state.actuals.federal_estimated_payments_cents" />
+            <MetricSummary label="California" :amount="state.actuals.california_estimated_payments_cents" />
+          </div>
+        </section>
       </div>
     </UCard>
 
     <UCard>
       <template #header><h2>Annual projection</h2></template>
-      <div class="metric-grid">
-        <MetricSummary label="Projected annual federal wages" :amount="state.projection.federal_wages_cents" meaning="projected" />
-        <MetricSummary label="Projected annual California wages" :amount="state.projection.california_wages_cents" meaning="projected" />
-        <MetricSummary label="Projected full-year federal withholding" :amount="state.projection.federal_withholding_cents" meaning="projected" />
-        <MetricSummary label="Projected full-year California withholding" :amount="state.projection.california_withholding_cents" meaning="projected" />
-        <template v-for="jurisdiction in jurisdictions" :key="jurisdiction">
-          <MetricSummary :label="`Projected ${jurisdiction === 'federal' ? 'Federal' : 'California'} liability`" :amount="state.tax[jurisdiction].annual_liability_cents" meaning="projected" />
-          <MetricSummary :label="`Remaining projected ${jurisdiction === 'federal' ? 'Federal' : 'California'} obligation`" :amount="state.tax[jurisdiction].remaining_obligation_cents" meaning="projected" />
-        </template>
+      <div class="projection-groups">
+        <div class="metric-groups">
+          <section class="metric-group" aria-labelledby="projected-wages-heading">
+            <h3 id="projected-wages-heading">Projected wages</h3>
+            <div class="metric-grid">
+              <MetricSummary label="Federal" :amount="state.projection.federal_wages_cents" />
+              <MetricSummary label="California" :amount="state.projection.california_wages_cents" />
+            </div>
+          </section>
+          <section class="metric-group" aria-labelledby="projected-withholding-heading">
+            <h3 id="projected-withholding-heading">Projected withholding</h3>
+            <div class="metric-grid">
+              <MetricSummary label="Federal" :amount="state.projection.federal_withholding_cents" />
+              <MetricSummary label="California" :amount="state.projection.california_withholding_cents" />
+            </div>
+          </section>
+        </div>
+        <section class="tax-position" aria-labelledby="projected-tax-position-heading">
+          <h3 id="projected-tax-position-heading">Projected tax position</h3>
+          <div class="metric-groups">
+            <section class="metric-group" aria-labelledby="annual-liability-heading">
+              <h4 id="annual-liability-heading">Annual liability</h4>
+              <div class="metric-grid">
+                <MetricSummary label="Federal" :amount="state.tax.federal.annual_liability_cents" />
+                <MetricSummary label="California" :amount="state.tax.california.annual_liability_cents" />
+              </div>
+            </section>
+            <section class="metric-group" aria-labelledby="remaining-obligation-heading">
+              <h4 id="remaining-obligation-heading">Remaining obligation</h4>
+              <div class="metric-grid">
+                <MetricSummary label="Federal" :amount="state.tax.federal.remaining_obligation_cents" />
+                <MetricSummary label="California" :amount="state.tax.california.remaining_obligation_cents" />
+              </div>
+            </section>
+          </div>
+        </section>
       </div>
     </UCard>
 
@@ -63,5 +110,5 @@ const jurisdictions: Jurisdiction[] = ['federal', 'california']
 </template>
 
 <style scoped>
-.page-stack { display: grid; gap: 1.5rem; }.eyebrow { color: var(--ui-primary); font-size: .75rem; font-weight: 700; letter-spacing: .08em; margin: 0; text-transform: uppercase; }h1, h2, .intro { margin: 0; }h1 { margin-top: .25rem; }.intro { color: var(--ui-text-muted); margin-top: .5rem; }.jurisdiction-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }.metric-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }.quarter-grid { display: grid; gap: .75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }@media (max-width: 800px) { .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }@media (max-width: 640px) { .jurisdiction-grid, .metric-grid, .quarter-grid { grid-template-columns: 1fr; } }
+.page-stack { display: grid; gap: 1.5rem; }.eyebrow { color: var(--ui-primary); font-size: .75rem; font-weight: 700; letter-spacing: .08em; margin: 0; text-transform: uppercase; }h1, h2, h3, h4, .intro { margin: 0; }h1 { margin-top: .25rem; }.intro { color: var(--ui-text-muted); margin-top: .5rem; }.jurisdiction-grid, .metric-groups { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }.earnings-groups { display: grid; gap: 1.5rem; }.metric-group { display: grid; gap: .75rem; }h3, h4 { color: var(--ui-text-muted); font-size: .875rem; font-weight: 650; }.metric-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }.investment-group { border-top: 1px solid var(--ui-border); padding-top: 1.5rem; }.investment-grid { display: grid; gap: 1rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }.projection-groups { display: grid; gap: 1.5rem; }.tax-position { border-top: 1px solid var(--ui-border); display: grid; gap: 1rem; padding-top: 1.5rem; }.quarter-grid { display: grid; gap: .75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }@media (max-width: 800px) { .investment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }@media (max-width: 640px) { .jurisdiction-grid, .metric-groups, .metric-grid, .investment-grid, .quarter-grid { grid-template-columns: 1fr; } }
 </style>
