@@ -1,10 +1,11 @@
 import { mount } from '@vue/test-utils'
+import { defineComponent, nextTick, ref } from 'vue'
 import { describe, expect, it } from 'vitest'
 import InvestmentSection from '~/components/InvestmentSection.vue'
 import PaystubSection from '~/components/PaystubSection.vue'
 
 const paystub = { date: '2026-06-01', pay_frequency: 'biweekly' as const, current_period_regular_wages_cents: 12345, current_period_bonus_wages_cents: 0, current_period_federal_withholding_cents: 100, current_period_california_withholding_cents: 50, federal_taxable_wages_ytd_cents: 123456, california_taxable_wages_ytd_cents: 123456, federal_withholding_ytd_cents: 1000, california_withholding_ytd_cents: 500, social_security_withholding_ytd_cents: 1, medicare_withholding_ytd_cents: 2, california_sdi_withholding_ytd_cents: 3 }
-const global = { stubs: { UCard: { template: '<section><slot name="header" /><slot /></section>' }, UFormField: { template: '<div><slot /></div>' }, UInput: true, USelect: true, UEmpty: { template: '<div><slot name="actions" /></div>' }, UButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' }, UAlert: true, WarningList: true, MoneyInput: { template: '<button class="money" @click="$emit(\'update:modelValue\', 999)">{{ label }}</button>', props: ['label'] } } }
+const global = { stubs: { UCard: { template: '<section><slot name="header" /><slot /></section>' }, UFormField: { template: '<div><slot /></div>' }, UInput: true, USelect: true, UEmpty: { template: '<div><slot name="actions" /></div>' }, UButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' }, UAlert: true, WarningList: true, MoneyInput: { template: '<button class="money" @click="$emit(\'update:modelValue\', 999)">{{ label }}</button>', props: ['label'] }, GrossPayCalculatorModal: { name: 'GrossPayCalculatorModal', template: '<div />', props: ['mode'] } } }
 
 describe('F2 section state flow', () => {
   it('emits an immutable investment replacement and displays a precise backend error', async () => {
@@ -26,5 +27,40 @@ describe('F2 section state flow', () => {
     expect(first.text()).toContain('California SDI Withholding')
     expect(first.text()).not.toContain('Current Period')
     expect(first.text()).not.toContain('YTD')
+  })
+
+  it('applies calculator results only to their intended paystub fields', async () => {
+    const wrapper = mount(PaystubSection, { props: { modelValue: paystub, spouse: 'spouse_1', label: 'Spouse 1', warnings: [], errors: [] }, global })
+    const calculators = wrapper.findAllComponents({ name: 'GrossPayCalculatorModal' })
+
+    calculators[1]!.vm.$emit('apply', { mode: 'year_to_date', federal_taxable_wages_cents: 120_001, california_taxable_wages_cents: 120_002 })
+    await nextTick()
+    const yearToDate = wrapper.emitted('update:modelValue')![0]![0] as typeof paystub
+    expect(yearToDate).toEqual({ ...paystub, federal_taxable_wages_ytd_cents: 120_001, california_taxable_wages_ytd_cents: 120_002 })
+
+    calculators[0]!.vm.$emit('apply', { mode: 'current_period', regular_wages_cents: 12_000 })
+    await nextTick()
+    const currentPeriod = wrapper.emitted('update:modelValue')![1]![0] as typeof paystub
+    expect(currentPeriod).toEqual({ ...paystub, current_period_regular_wages_cents: 12_000 })
+  })
+
+  it('does not change the other spouse when a calculator result is applied', async () => {
+    const otherPaystub = { ...paystub, current_period_regular_wages_cents: 54_321 }
+    const Harness = defineComponent({
+      components: { PaystubSection },
+      setup() {
+        const paystubs = ref({ spouse_1: { ...paystub }, spouse_2: otherPaystub })
+        return { paystubs }
+      },
+      template: '<div><PaystubSection v-model="paystubs.spouse_1" spouse="spouse_1" label="One" :warnings="[]" :errors="[]" /><PaystubSection v-model="paystubs.spouse_2" spouse="spouse_2" label="Two" :warnings="[]" :errors="[]" /></div>'
+    })
+    const wrapper = mount(Harness, { global })
+    const first = wrapper.findAllComponents(PaystubSection)[0]!
+    first.findAllComponents({ name: 'GrossPayCalculatorModal' })[1]!.vm.$emit('apply', {
+      mode: 'year_to_date', federal_taxable_wages_cents: 120_001, california_taxable_wages_cents: 120_002
+    })
+    await nextTick()
+
+    expect((wrapper.vm as { paystubs: { spouse_2: typeof paystub } }).paystubs.spouse_2).toEqual(otherPaystub)
   })
 })

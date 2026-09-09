@@ -169,8 +169,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload))
       </UCard>
 
       <UCard>
-        <template #header><h2>Data</h2><p>Backups and restores include the complete local SQLite database.</p></template>
-        <div class="data-actions"><UButton color="neutral" variant="outline" @click="downloadBackup">Download SQLite backup</UButton><UFormField label="SQLite backup to restore"><UInput type="file" accept=".sqlite,application/vnd.sqlite3,application/octet-stream" @change="restoreFile = ($event.target as HTMLInputElement).files?.[0] ?? null" /></UFormField><UButton color="error" :loading="saving" :disabled="saving || !restoreFile" @click="restoreDatabase">Restore backup</UButton></div>
+        <template #header><h2>Database</h2></template>
+        <div class="data-actions"><p>Backups and restores include the complete local SQLite database.</p><UButton color="neutral" variant="outline" @click="downloadBackup">Download SQLite backup</UButton><UFormField label="SQLite backup to restore"><UInput type="file" accept=".sqlite,application/vnd.sqlite3,application/octet-stream" @change="restoreFile = ($event.target as HTMLInputElement).files?.[0] ?? null" /></UFormField><UButton color="error" :loading="saving" :disabled="saving || !restoreFile" @click="restoreDatabase">Restore backup</UButton></div>
       </UCard>
     </ApplicationState>
   </div>

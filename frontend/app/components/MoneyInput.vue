@@ -24,6 +24,7 @@ function commit() {
 
 <template>
   <UFormField :label="label" :help="help" :error="error">
+    <template #label><span class="label-with-action">{{ label }}<slot name="label-action" /></span></template>
     <UInput
       v-model="text"
       inputmode="decimal"
@@ -34,3 +35,7 @@ function commit() {
     />
   </UFormField>
 </template>
+
+<style scoped>
+.label-with-action { align-items: center; display: inline-flex; flex-wrap: wrap; gap: .5rem; }
+</style>

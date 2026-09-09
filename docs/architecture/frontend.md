@@ -98,6 +98,8 @@ One repeated section for each spouse:
 
 The saved spouse label appears in each paystub heading. Section headings supply time context, so individual field labels do not repeat “Current pay period” or “YTD”; labels use title case and preserve acronyms. There is no job setup or job selection.
 
+A frontend-only gross-pay calculator may populate the existing taxable-wage fields without saving its deduction breakdown or calling the API. YTD gross includes all earnings and Apply updates Federal and California taxable wages together. Current-period gross excludes bonuses and other nonrecurring pay; its single regular-wage field uses the Federal result and visibly warns that HSA treatment can differ for California. This is input normalization only, not frontend tax calculation or tax-rule ownership.
+
 ### 4. Quarterly investments
 
 - Ordinary dividends

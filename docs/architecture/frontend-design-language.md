@@ -67,6 +67,12 @@ Avoid wrappers that merely rename one Nuxt UI component without adding shared be
 
 Use Nuxt UI button `color` and `variant` props as the semantic button classifier. Layout classes may position a button but must not define its meaning. Destructive removal actions use the error outline treatment and sit on their own form row at natural width.
 
+## Modal pattern
+
+Use Nuxt UI `UModal` directly. Every application modal has a clear action title, an optional one-sentence purpose in the standard header, a scrollable body when its task can exceed the viewport, and a footer with a neutral outline **Cancel** action on the left and the validated primary action on the right. Place validation and cautions beside the affected body content. Destructive modal actions use the error color and state the irreversible consequence explicitly.
+
+Do not create a modal wrapper until more than one substantial modal demonstrates a shared application behavior beyond this documented composition. Native browser confirmations remain outside this pattern until they are deliberately migrated.
+
 ## Summary and form patterns
 
 - A multi-jurisdiction recommendation has one shared section title. Each Federal or California card contains the jurisdiction heading, a muted outcome line, one aligned current-amount row, and a two-column supporting-details grid. A divider separates the current amount from supporting details.
@@ -74,6 +80,7 @@ Use Nuxt UI button `color` and `variant` props as the semantic button classifier
 - Empty states live inside their enclosing card without adding a second visible ring or border.
 - Form section headings establish shared context. Paystub labels therefore omit repeated **Current pay period** and **Year to date** wording, use title case, and preserve recognized acronyms such as **SDI**.
 - Spouse-facing headings use the saved household label, with the stable spouse key retained only for data mapping.
+- A gross-pay calculator may normalize user-entered payroll amounts into existing paystub fields entirely in the browser. It shows its arithmetic, requires explicit Apply, retains manual editability, and never stores its deduction breakdown. This narrowly scoped input convenience must not calculate tax liability, encode tax rules, or become a precedent for frontend tax behavior.
 
 ## Chart language
 
