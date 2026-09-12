@@ -49,7 +49,48 @@ export function isQuarterResource(value: unknown): value is QuarterResource {
   return record(value) && value.tax_year === 2026 && quarter(value.quarter) && input(value.input) && result(value.result) && warnings(value.warnings)
 }
 
-export function cloneQuarterForm(value: QuarterForm): QuarterForm { return structuredClone(value) }
+function clonePaystub(value: QuarterForm['paystubs']['spouse_1']): QuarterForm['paystubs']['spouse_1'] {
+  if (value === null) return null
+  return {
+    date: value.date,
+    pay_frequency: value.pay_frequency,
+    current_period_regular_wages_cents: value.current_period_regular_wages_cents,
+    current_period_bonus_wages_cents: value.current_period_bonus_wages_cents,
+    current_period_federal_withholding_cents: value.current_period_federal_withholding_cents,
+    current_period_california_withholding_cents: value.current_period_california_withholding_cents,
+    federal_taxable_wages_ytd_cents: value.federal_taxable_wages_ytd_cents,
+    california_taxable_wages_ytd_cents: value.california_taxable_wages_ytd_cents,
+    federal_withholding_ytd_cents: value.federal_withholding_ytd_cents,
+    california_withholding_ytd_cents: value.california_withholding_ytd_cents,
+    social_security_withholding_ytd_cents: value.social_security_withholding_ytd_cents,
+    medicare_withholding_ytd_cents: value.medicare_withholding_ytd_cents,
+    california_sdi_withholding_ytd_cents: value.california_sdi_withholding_ytd_cents
+  }
+}
+
+function cloneInvestments(value: QuarterForm['investments']): QuarterForm['investments'] {
+  if (value === null) return null
+  return {
+    ordinary_dividends_cents: value.ordinary_dividends_cents,
+    qualified_dividends_cents: value.qualified_dividends_cents,
+    short_term_gain_cents: value.short_term_gain_cents,
+    long_term_gain_cents: value.long_term_gain_cents,
+    federal_withholding_cents: value.federal_withholding_cents,
+    california_withholding_cents: value.california_withholding_cents,
+    notes: value.notes
+  }
+}
+
+export function cloneQuarterForm(value: QuarterForm): QuarterForm {
+  return {
+    paystubs: { spouse_1: clonePaystub(value.paystubs.spouse_1), spouse_2: clonePaystub(value.paystubs.spouse_2) },
+    investments: cloneInvestments(value.investments),
+    payments: {
+      federal: { amount_cents: value.payments.federal.amount_cents, date: value.payments.federal.date },
+      california: { amount_cents: value.payments.california.amount_cents, date: value.payments.california.date }
+    }
+  }
+}
 export function sameValue(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true
   if (Array.isArray(left) && Array.isArray(right)) return left.length === right.length && left.every((value, index) => sameValue(value, right[index]))

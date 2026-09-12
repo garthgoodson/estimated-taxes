@@ -144,6 +144,12 @@ Relevant projection warnings include:
 - Elapsed investment quarter has no entered data
 - Investment income is not projected into future quarters
 
+## Deferred TODO: Multiple pay sources
+
+The MVP has one consolidated source per spouse and therefore selects one authoritative paystub per spouse. A future multiple-source model must group snapshots by stable `pay_source_id`, not merely allow an unstructured list of paystubs.
+
+For each source, the latest eligible paystub is authoritative for that source's YTD amounts. The annual projection sums those authoritative source totals. Only sources without a projection end date repeat their regular wages and withholding into remaining pay periods; an end date stops a pay pattern and does not assert that the spouse is generally unemployed.
+
 ## Exclusions
 
 - Jobs and job lifecycle

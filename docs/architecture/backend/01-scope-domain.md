@@ -59,7 +59,13 @@ It contains enough information to identify:
 
 A paystub includes a bonus when `current_period_bonus_wages_cents > 0`; this is derived and not stored separately.
 
-There is no Job concept. The MVP assumes at most one consolidated paystub source per spouse.
+There is no Job concept. The MVP assumes exactly one consolidated pay source and one paystub snapshot per spouse. Multiple undifferentiated paystubs are unsupported because same-employer YTD totals overlap and must not be added together.
+
+### Deferred multiple pay sources
+
+A future extension may add lightweight pay sources without becoming a Job feature. Each source needs a stable `pay_source_id`, optional label, paystub snapshots, and an optional projection end date. It does not require employer addresses, job titles, employment dates, or other job-management data.
+
+For a mid-quarter transition, the old source retains its final YTD paystub and ends its projection; the new source starts with its separate YTD paystub. Projection must sum the latest authoritative paystub from each source while projecting forward only sources without an end date.
 
 ## Quarterly investment summary
 
@@ -116,7 +122,7 @@ Snapshots support save, view, rename, and delete only. They do not support compa
 - A case is one exact tax year, married filing jointly, and California resident.
 - Exactly one case is open; closed cases are immutable and reference a protected closure snapshot.
 - A case has no more than two spouses.
-- A spouse has no more than one paystub snapshot per quarter.
+- An MVP spouse has no more than one consolidated paystub snapshot per quarter. A future multiple-source model must use stable pay-source identities rather than an unstructured paystub list.
 - Investments contain quarter-specific values.
 - Qualified dividends cannot exceed ordinary dividends.
 - Payments belong to exactly one jurisdiction and quarter.

@@ -94,6 +94,22 @@ void bootstrap_and_complete_serialization()
   require(json_object_get(member(federal_tax, "details"), "amount_requiring_estimated_payments_cents") != nullptr &&
               json_object_get(federal_tax, "capital_netting") != nullptr,
           "full tax result serialized");
+  json_t* annual_tax = member(bootstrap_json.get(), "tax");
+  require(json_integer_value(member(member(annual_tax, "federal"), "projected_overpayment_cents")) == 0 &&
+              json_integer_value(member(member(annual_tax, "california"), "projected_overpayment_cents")) == 0,
+          "annual tax summary serializes projected overpayment separately");
+  const std::string payment_only =
+      "{\"paystubs\":{\"spouse_1\":null,\"spouse_2\":null},\"investments\":null,"
+      "\"payments\":{\"federal\":{\"amount_cents\":100,\"date\":\"2026-03-31\"},"
+      "\"california\":{\"amount_cents\":0,\"date\":null}}}";
+  require(app.handle(json_request("PUT", "/api/2026/quarters/1", payment_only)).status == 200,
+          "payment-only quarter saved");
+  Json overpaid_bootstrap(app.handle({"GET", "/api/2026", {}, {}}).body);
+  json_t* overpaid_tax = member(overpaid_bootstrap.get(), "tax");
+  require(json_integer_value(member(member(overpaid_tax, "federal"), "remaining_obligation_cents")) == 0 &&
+              json_integer_value(member(member(overpaid_tax, "federal"), "projected_overpayment_cents")) == 100 &&
+              json_integer_value(member(member(overpaid_tax, "california"), "projected_overpayment_cents")) == 0,
+          "annual overpayment value is exposed independently");
   json_t* federal_recommendation = member(member(result, "current_recommendations"), "federal");
   require(json_object_get(federal_recommendation, "future_outlook") != nullptr &&
               json_object_get(federal_recommendation, "remaining_after_recommendation_cents") != nullptr,

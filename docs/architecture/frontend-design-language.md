@@ -81,6 +81,7 @@ Do not create a modal wrapper until more than one substantial modal demonstrates
 - Form section headings establish shared context. Paystub labels therefore omit repeated **Current pay period** and **Year to date** wording, use title case, and preserve recognized acronyms such as **SDI**.
 - Spouse-facing headings use the saved household label, with the stable spouse key retained only for data mapping.
 - A gross-pay calculator may normalize user-entered payroll amounts into existing paystub fields entirely in the browser. It shows its arithmetic, requires explicit Apply, retains manual editability, and never stores its deduction breakdown. This narrowly scoped input convenience must not calculate tax liability, encode tax rules, or become a precedent for frontend tax behavior.
+- Quarter investment activity uses editable aggregates with an **Add** modal for signed adjustments. The modal updates one displayed total at a time; it does not imply or store individual investment transactions.
 
 ## Chart language
 

@@ -632,6 +632,7 @@ json_t* bootstrap_json(const CurrentResult& result, const TaxYearInputs& inputs)
     json_t* item = json_object();
     json_object_set_new(item, "annual_liability_cents", json_integer(pair.first->details.annual_liability_cents));
     json_object_set_new(item, "remaining_obligation_cents", optional_integer_json(pair.second->remaining_before_recommendation_cents));
+    json_object_set_new(item, "projected_overpayment_cents", json_integer(pair.second->projected_overpayment_cents));
     json_object_set_new(item, "current_recommendation_cents", optional_integer_json(pair.second->recommended_payment_cents));
     json_object_set_new(tax, name, item);
   }

@@ -1,11 +1,24 @@
+import { reactive } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { createQuarterEditor } from '~/composables/useQuarterEditor'
+import { cloneQuarterForm } from '~/utils/quarter'
 import type { QuarterResource } from '~/types/quarter'
 
 const response = { input: { paystubs: { spouse_1: null, spouse_2: null }, investments: null, payments: { federal: { amount_cents: 0, date: null }, california: { amount_cents: 0, date: null } } } } as QuarterResource
 const apiError = { kind: 'transport', code: 'offline', message: 'Offline', fields: [] } as const
 
 describe('quarter editor workflow', () => {
+  it('serializes a payment-only form with nested reactive state', () => {
+    const form = { paystubs: { spouse_1: null, spouse_2: null }, investments: null, payments: reactive({ federal: { amount_cents: 500_000, date: '2026-04-15' }, california: { amount_cents: 0, date: null } }) }
+
+    expect(() => structuredClone(form)).toThrow()
+    expect(cloneQuarterForm(form)).toEqual({
+      paystubs: { spouse_1: null, spouse_2: null },
+      investments: null,
+      payments: { federal: { amount_cents: 500_000, date: '2026-04-15' }, california: { amount_cents: 0, date: null } }
+    })
+  })
+
   it('retries loading and replaces the saved baseline', async () => {
     const client = { getQuarter: vi.fn().mockRejectedValueOnce(apiError).mockResolvedValue(response), saveQuarter: vi.fn() }
     const editor = createQuarterEditor(client, 3)

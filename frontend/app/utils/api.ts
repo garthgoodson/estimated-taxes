@@ -28,7 +28,7 @@ function isWarning(value: unknown): value is ApiWarning {
 
 function isJurisdictionTax(value: unknown): boolean {
   return isRecord(value) && isCents(value.annual_liability_cents) &&
-    isOptionalCents(value.remaining_obligation_cents) &&
+    isOptionalCents(value.remaining_obligation_cents) && isCents(value.projected_overpayment_cents) &&
     isOptionalCents(value.current_recommendation_cents)
 }
 

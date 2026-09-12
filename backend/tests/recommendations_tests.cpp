@@ -32,18 +32,31 @@ void payment_boundaries_and_validation(){ auto active=rules(); auto in=inputs();
   in.quarters[0].federal_payment={500,"2026-03-31"}; r=recommend_payments(in,"2026-06-01",taxes(200,0),active); require(*r.federal.recommended_payment_cents==0,"falling projection can eliminate payment");
   const std::vector<ValidationOutcome> notices{{ValidationSeverity::caution,Jurisdiction::federal,"caution","caution"},{ValidationSeverity::informational,std::nullopt,"information","information"}}; r=recommend_payments(inputs(),"2026-03-31",taxes(1000,0),active,notices); require(r.validation.size()==2&&r.federal.calculation_status==CalculationStatus::available,"caution and informational validation remain distinguishable");
 }
+void annual_position_states(){ auto active=rules();
+  auto in=inputs(); in.quarters[0].federal_payment={400,"2026-03-31"}; auto r=recommend_payments(in,"2026-03-31",taxes(1000,1000),active);
+  require(*r.federal.remaining_before_recommendation_cents==600&&r.federal.projected_overpayment_cents==0,"underpayment exposes remaining obligation");
+  in.quarters[0].federal_payment={1000,"2026-03-31"}; r=recommend_payments(in,"2026-03-31",taxes(1000,1000),active);
+  require(*r.federal.remaining_before_recommendation_cents==0&&r.federal.projected_overpayment_cents==0,"exact balance exposes neither position");
+  in.quarters[0].federal_payment={1200,"2026-03-31"}; r=recommend_payments(in,"2026-03-31",taxes(1000,1000),active);
+  require(*r.federal.remaining_before_recommendation_cents==0&&r.federal.projected_overpayment_cents==200,"overpayment exposes separate amount");
+  in=inputs(); in.quarters[0].federal_payment={400,"2026-03-31"}; in.quarters[0].california_payment={1200,"2026-03-31"}; r=recommend_payments(in,"2026-03-31",taxes(1000,1000),active);
+  const Cents federal_net=*r.federal.remaining_before_recommendation_cents-r.federal.projected_overpayment_cents;
+  const Cents california_net=*r.california.remaining_before_recommendation_cents-r.california.projected_overpayment_cents;
+  require(federal_net==600&&california_net==-200&&r.federal.projected_overpayment_cents==0&&*r.california.remaining_before_recommendation_cents==0,"jurisdiction positions remain independent");
+}
 void composition(){ auto active=rules(); auto in=inputs(); Household household; const auto result=compose_current_result(household,in,"2026-03-31",active); require(result.as_of_date=="2026-03-31"&&result.recommendations.federal.rule_revision_id==active.federal.id&&result.recommendations.california.rule_revision_id==active.california.id,"composed result retains all stages"); }
 }
 int main()
 {
   using TestCase = std::pair<const char*, void (*)()>;
-  const std::array<TestCase, 7> tests{{
+  const std::array<TestCase, 8> tests{{
     {"schedules", schedules_and_rounding},
     {"states", payments_states_and_dates},
     {"overpayment", overpayment_and_independence},
     {"validation", insufficient_and_invalid_payment},
     {"targets and outlook", targets_outlook_and_california_q3},
     {"payment boundaries", payment_boundaries_and_validation},
+    {"annual position", annual_position_states},
     {"composition", composition},
   }};
 

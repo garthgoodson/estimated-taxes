@@ -14,10 +14,10 @@ export function formatCents(value: Cents | null | undefined): string {
 export function parseDollars(value: string, allowNegative = false): Cents | null {
   const text = value.trim()
   if (!text) return null
-  if (!/^-?\d+(?:\.\d{0,2})?$/.test(text)) return null
+  if (!/^-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{0,2})?$/.test(text)) return null
   const negative = text.startsWith('-')
   if (negative && !allowNegative) return null
-  const [whole, fraction = ''] = (negative ? text.slice(1) : text).split('.')
+  const [whole, fraction = ''] = (negative ? text.slice(1) : text).replaceAll(',', '').split('.')
   const cents = Number(whole) * 100 + Number((fraction + '00').slice(0, 2))
   return negative ? -cents : cents
 }

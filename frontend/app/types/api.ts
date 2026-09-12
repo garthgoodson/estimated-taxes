@@ -57,6 +57,7 @@ export interface BootstrapState {
   tax: Record<Jurisdiction, {
     annual_liability_cents: Cents
     remaining_obligation_cents: Cents | null
+    projected_overpayment_cents: Cents
     current_recommendation_cents: Cents | null
   }>
   quarters: BootstrapQuarter[]

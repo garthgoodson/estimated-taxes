@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import AnnualPositionSummary from '~/components/AnnualPositionSummary.vue'
+import HelpTooltip from '~/components/HelpTooltip.vue'
 import MoneyDisplay from '~/components/MoneyDisplay.vue'
 import QuarterStatus from '~/components/QuarterStatus.vue'
 import WarningList from '~/components/WarningList.vue'
@@ -14,6 +15,23 @@ const global = {
 }
 
 describe('financial presentation', () => {
+  it('provides accessible dashboard help on hover and focus', () => {
+    const tooltipStub = { name: 'UTooltip', template: '<span class="tooltip">{{ text }}<slot /></span>', props: ['text', 'ui'] }
+    const wrapper = mount(HelpTooltip, {
+      props: { label: 'Projected wages', text: 'Estimated full-year taxable wages.' },
+      global: {
+        stubs: {
+          UTooltip: tooltipStub,
+          UButton: { template: '<button><slot /></button>' }
+        }
+      }
+    })
+    expect(wrapper.find('.tooltip').text()).toContain('Estimated full-year taxable wages.')
+    expect(wrapper.findComponent(tooltipStub).props('ui')).toEqual({ content: 'h-auto w-max max-w-72', text: 'whitespace-normal break-words' })
+    expect(wrapper.get('button').attributes('aria-label')).toBe('About Projected wages')
+    expect(wrapper.get('button').attributes('type')).toBe('button')
+  })
+
   it('labels projected monetary values', () => {
     const wrapper = mount(MoneyDisplay, { props: { value: 1250, meaning: 'projected' } })
     expect(wrapper.text()).toContain('$12.50')

@@ -27,6 +27,8 @@ Q1-Q4 are directly accessible within Quarters, and the open case's backend-provi
 
 Home is read-only and answers: "Where do we currently stand for 2026?"
 
+Second-level financial group headings provide concise help through accessible info tooltips. Card titles, Federal and California labels, and lower-level metric headings do not repeat this help treatment.
+
 ### Annual tax status
 
 - Projected federal tax
@@ -53,9 +55,9 @@ Withholding and estimated payments remain visually distinct; group headings carr
 
 - **Projected wages:** Federal and California values.
 - **Projected withholding:** Federal and California values.
-- **Projected tax position:** annual liability and remaining obligation groups, each with Federal and California values.
+- **Projected tax position:** annual liability and annual position groups, each with Federal and California values. Annual position displays one contextual result per jurisdiction: remaining projected obligation, projected overpayment, or no remaining projected obligation. Remaining obligation and projected overpayment are separate nonnegative backend values.
 
-A divider separates the projected tax position from projected wages and withholding.
+A divider separates the projected tax position from projected wages and withholding. The annual position is distinct from the quarter page's immediate payment recommendation.
 
 ### Quarter status
 
@@ -109,7 +111,7 @@ A frontend-only gross-pay calculator may populate the existing taxable-wage fiel
 - Supported investment withholding
 - Optional notes
 
-The section must clearly state that values are for the selected quarter, not YTD.
+The section must clearly state that values are for the selected quarter, not YTD. Users may add a signed amount to one aggregate through the investment-entry modal or directly correct an aggregate total. Individual investment entries are not retained; only the resulting quarter totals and optional notes are saved.
 
 ### 5. Estimated payments
 

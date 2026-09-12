@@ -181,7 +181,7 @@ A closed case accepts GET requests only. Any mutation to a year-owned resource r
 
 ### `GET /api/{year}`
 
-Returns everything needed to render Home and the global quarter navigation. `/api/2026` remains the canonical 2026 URL.
+Returns everything needed to render Home and the global quarter navigation. `/api/2026` remains the canonical 2026 URL. Each annual jurisdiction summary exposes separate nonnegative `remaining_obligation_cents` and `projected_overpayment_cents` values; at most one is positive. The Home display selects the applicable contextual label rather than displaying a signed amount.
 
 ```json
 {
@@ -216,11 +216,13 @@ Returns everything needed to render Home and the global quarter navigation. `/ap
     "federal": {
       "annual_liability_cents": 4800000,
       "remaining_obligation_cents": 650000,
+      "projected_overpayment_cents": 0,
       "current_recommendation_cents": 325000
     },
     "california": {
       "annual_liability_cents": 2100000,
       "remaining_obligation_cents": 175000,
+      "projected_overpayment_cents": 0,
       "current_recommendation_cents": 0
     }
   },
