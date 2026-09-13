@@ -8,7 +8,7 @@ export type AnnualProjection = {
   federal_withholding: ProjectionAmounts
   california_withholding: ProjectionAmounts
   investments: NonNullable<QuarterInput['investments']>
-  spouses: Array<{ key: 'spouse_1' | 'spouse_2'; authoritative_quarter: QuarterNumber | null; remaining_pay_periods: number; federal_wages: ProjectionAmounts; california_wages: ProjectionAmounts; federal_withholding: ProjectionAmounts; california_withholding: ProjectionAmounts }>
+  spouses: Array<{ key: 'spouse_1' | 'spouse_2'; authoritative_quarter: QuarterNumber | null; authoritative_paystub_date: IsoDate | null; pay_frequency: PaystubInput['pay_frequency'] | null; projection_horizon: IsoDate | null; completed_pay_periods_at_paystub: number; completed_pay_periods_at_horizon: number; remaining_pay_periods: number; federal_wages: ProjectionAmounts; california_wages: ProjectionAmounts; federal_withholding: ProjectionAmounts; california_withholding: ProjectionAmounts }>
   warnings: ApiWarning[]
 }
 export type TaxResult = {

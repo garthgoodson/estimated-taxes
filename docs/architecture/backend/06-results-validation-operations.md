@@ -33,7 +33,7 @@ Define the result hierarchy, explanation and snapshot behavior, validation sever
 - Actual versus projected wages and withholding
 - Tax calculation stages
 - Payment calculation stages
-- Assumptions inherent in the projection
+- Assumptions inherent in the projection, including each pay pattern's horizon and period counts
 - Rule source and revision
 - Relevant warnings
 
@@ -41,7 +41,7 @@ The displayed breakdown must reconcile with its headline result.
 
 ## Saved snapshots
 
-Snapshots are created explicitly, not after every edit. A snapshot preserves its as-of date, inputs, projection, rules, federal and California results, recommendations, and warnings.
+Snapshots are created explicitly, not after every edit. A snapshot preserves its as-of date, inputs (including a paystub projection end date), projection details, rules, federal and California results, recommendations, and warnings.
 
 The user may save, view, rename, and delete ordinary snapshots. A closed tax-year case references one protected closure snapshot; it preserves the final result and cannot be renamed or deleted. There is no snapshot comparison, branching, or recalculation workflow.
 
@@ -55,7 +55,7 @@ Examples:
 
 - Missing or invalid active rule set
 - Qualified dividends exceed ordinary dividends
-- Contradictory paystub values
+- Contradictory paystub values: negative money; invalid paystub date; projection end date before the paystub date; current regular-plus-bonus wages above either YTD taxable-wage value; or current jurisdiction withholding above its corresponding YTD withholding. Errors identify the exact spouse field.
 - Invalid jurisdiction or quarter
 - Unreadable or internally inconsistent stored data
 
@@ -79,10 +79,11 @@ Examples:
 - Enhanced federal senior deduction is omitted
 - Custom rules are active
 - A due date has passed
+- Plausible but unusual withholding, wage reconciliation, or chronological YTD changes. These checks allow saving and identify the affected spouse and field.
 
 ### Informational
 
-Explain normal behavior, such as California's zero-percent Q3 installment or a recommendation containing catch-up.
+Explain normal behavior, such as California's zero-percent Q3 installment, a recommendation containing catch-up, or a selected pay-pattern end date limiting future wage and withholding projection without asserting employment termination.
 
 ## Source-of-truth categories
 

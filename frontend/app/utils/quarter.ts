@@ -13,9 +13,17 @@ function warnings(value: unknown): boolean {
   return Array.isArray(value) && value.every(item => record(item) && ['blocking', 'caution', 'information'].includes(item.severity as string) && typeof item.code === 'string' && typeof item.message === 'string' && (item.path === undefined || typeof item.path === 'string'))
 }
 function projectionAmounts(value: unknown): boolean { return record(value) && cents(value.actual_cents) && cents(value.projected_remaining_cents) && cents(value.projected_annual_cents) }
+function optionalText(value: unknown): boolean { return value === null || typeof value === 'string' }
+function nonnegativeInteger(value: unknown): boolean { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 }
+function spouseProjection(value: unknown): boolean {
+  return record(value) && ['spouse_1', 'spouse_2'].includes(value.key as string) && (value.authoritative_quarter === null || quarter(value.authoritative_quarter)) &&
+    optionalText(value.authoritative_paystub_date) && (value.pay_frequency === null || frequencies.includes(value.pay_frequency as string)) && optionalText(value.projection_horizon) &&
+    nonnegativeInteger(value.completed_pay_periods_at_paystub) && nonnegativeInteger(value.completed_pay_periods_at_horizon) && nonnegativeInteger(value.remaining_pay_periods) &&
+    ['federal_wages', 'california_wages', 'federal_withholding', 'california_withholding'].every(field => projectionAmounts(value[field]))
+}
 function paystub(value: unknown): boolean {
   if (value === null) return true
-  if (!record(value) || typeof value.date !== 'string' || !frequencies.includes(value.pay_frequency as string)) return false
+  if (!record(value) || typeof value.date !== 'string' || !frequencies.includes(value.pay_frequency as string) || (value.projection_end_date !== null && typeof value.projection_end_date !== 'string')) return false
   return ['current_period_regular_wages_cents', 'current_period_bonus_wages_cents', 'current_period_federal_withholding_cents', 'current_period_california_withholding_cents', 'federal_taxable_wages_ytd_cents', 'california_taxable_wages_ytd_cents', 'federal_withholding_ytd_cents', 'california_withholding_ytd_cents', 'social_security_withholding_ytd_cents', 'medicare_withholding_ytd_cents', 'california_sdi_withholding_ytd_cents'].every(field => cents(value[field]))
 }
 function input(value: unknown): boolean {
@@ -39,7 +47,7 @@ function result(value: unknown): boolean {
   const investments = projection.investments
   return ['federal_wages', 'california_wages', 'federal_withholding', 'california_withholding'].every(field => projectionAmounts(projection[field])) &&
     record(investments) && ['ordinary_dividends_cents', 'qualified_dividends_cents', 'short_term_gain_cents', 'long_term_gain_cents', 'federal_withholding_cents', 'california_withholding_cents'].every(field => cents(investments[field])) &&
-    Array.isArray(projection.spouses) && warnings(projection.warnings) &&
+    Array.isArray(projection.spouses) && projection.spouses.length === 2 && projection.spouses.every(spouseProjection) && warnings(projection.warnings) &&
     ['federal', 'california'].every(name => record(value[name]) && record(value[name].details) && cents(value[name].details.annual_liability_cents) && cents(value[name].details.projected_withholding_cents) && cents(value[name].details.amount_requiring_estimated_payments_cents) && warnings(value[name].warnings)) &&
     recommendation(value.current_recommendations.federal) && recommendation(value.current_recommendations.california) && Array.isArray(value.current_recommendations.validation) &&
     value.current_recommendations.validation.every(item => record(item) && ['blocking', 'caution', 'informational'].includes(item.severity as string) && (item.jurisdiction === null || ['federal', 'california'].includes(item.jurisdiction as string)) && typeof item.code === 'string' && typeof item.message === 'string')
@@ -54,6 +62,7 @@ function clonePaystub(value: QuarterForm['paystubs']['spouse_1']): QuarterForm['
   return {
     date: value.date,
     pay_frequency: value.pay_frequency,
+    projection_end_date: value.projection_end_date,
     current_period_regular_wages_cents: value.current_period_regular_wages_cents,
     current_period_bonus_wages_cents: value.current_period_bonus_wages_cents,
     current_period_federal_withholding_cents: value.current_period_federal_withholding_cents,

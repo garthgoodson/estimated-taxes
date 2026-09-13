@@ -67,6 +67,7 @@ export interface BootstrapState {
 export interface PaystubInput {
   date: IsoDate
   pay_frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly'
+  projection_end_date: IsoDate | null
   current_period_regular_wages_cents: Cents
   current_period_bonus_wages_cents: Cents
   current_period_federal_withholding_cents: Cents

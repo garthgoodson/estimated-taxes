@@ -94,7 +94,7 @@ Every response that includes refreshed current results uses this exact `current_
     "federal_withholding": {"actual_cents": 0, "projected_remaining_cents": 0, "projected_annual_cents": 0},
     "california_withholding": {"actual_cents": 0, "projected_remaining_cents": 0, "projected_annual_cents": 0},
     "investments": {"ordinary_dividends_cents": 0, "qualified_dividends_cents": 0, "short_term_gain_cents": 0, "long_term_gain_cents": 0, "federal_withholding_cents": 0, "california_withholding_cents": 0},
-    "spouses": [{"key": "spouse_1", "authoritative_quarter": null, "remaining_pay_periods": 0, "federal_wages": {}, "california_wages": {}, "federal_withholding": {}, "california_withholding": {}}],
+    "spouses": [{"key": "spouse_1", "authoritative_quarter": null, "authoritative_paystub_date": null, "pay_frequency": null, "projection_horizon": null, "completed_pay_periods_at_paystub": 0, "completed_pay_periods_at_horizon": 0, "remaining_pay_periods": 0, "federal_wages": {}, "california_wages": {}, "federal_withholding": {}, "california_withholding": {}}],
     "warnings": []
   },
   "tax": {"federal": {}, "california": {}},
@@ -256,6 +256,7 @@ Replaces all editable inputs for the selected quarter.
     "spouse_1": {
       "date": "2026-09-01",
       "pay_frequency": "biweekly",
+      "projection_end_date": null,
       "current_period_regular_wages_cents": 420000,
       "current_period_bonus_wages_cents": 0,
       "current_period_federal_withholding_cents": 70000,
@@ -314,7 +315,7 @@ The response uses the same shape for `GET` and successful `PUT`; `result.as_of_d
 
 Repeatedly sending the same valid `PUT` document produces the same saved quarter state.
 
-Supported `pay_frequency` values are `weekly`, `biweekly`, `semimonthly`, and `monthly`. The ordinary Medicare field is the total shown on the paystub and is display-only; it is not treated as federal income-tax withholding or as separately identified Additional Medicare Tax withholding.
+Supported `pay_frequency` values are `weekly`, `biweekly`, `semimonthly`, and `monthly`. `projection_end_date` is a required nullable ISO date field whenever a paystub object is supplied: `null` projects through year end, the paystub date stops further periods, and a later 2026 date limits the pattern through that date. It must not precede the paystub date. The ordinary Medicare field is the total shown on the paystub and is display-only; it is not treated as federal income-tax withholding or as separately identified Additional Medicare Tax withholding.
 
 Payment records describe completed payments. A non-null payment date must not be after the calculation as-of date. Use a zero amount and `null` date when no payment was made.
 

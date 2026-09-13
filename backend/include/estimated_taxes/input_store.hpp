@@ -45,6 +45,7 @@ struct PaystubSnapshot {
   Cents social_security_withholding_ytd_cents{};
   Cents medicare_withholding_ytd_cents{};
   Cents california_sdi_withholding_ytd_cents{};
+  std::optional<std::string> projection_end_date;
 
   bool operator==(const PaystubSnapshot&) const = default;
 };

@@ -65,6 +65,12 @@ std::string empty_quarter(std::string investments = "null")
          "\"california\":{\"amount_cents\":0,\"date\":null}}}";
 }
 
+std::string paystub_quarter(const std::string& projection_end_date)
+{
+  return "{\"paystubs\":{\"spouse_1\":{\"date\":\"2026-03-31\",\"pay_frequency\":\"monthly\",\"projection_end_date\":" + projection_end_date +
+         ",\"current_period_regular_wages_cents\":100,\"current_period_bonus_wages_cents\":0,\"current_period_federal_withholding_cents\":10,\"current_period_california_withholding_cents\":5,\"federal_taxable_wages_ytd_cents\":300,\"california_taxable_wages_ytd_cents\":300,\"federal_withholding_ytd_cents\":30,\"california_withholding_ytd_cents\":15,\"social_security_withholding_ytd_cents\":0,\"medicare_withholding_ytd_cents\":0,\"california_sdi_withholding_ytd_cents\":0},\"spouse_2\":null},\"investments\":null,\"payments\":{\"federal\":{\"amount_cents\":0,\"date\":null},\"california\":{\"amount_cents\":0,\"date\":null}}}";
+}
+
 json_t* member(json_t* object, const char* name)
 {
   json_t* value = json_object_get(object, name);
@@ -151,6 +157,48 @@ void quarter_strictness_validation_and_rollback()
   require(app.handle({"PUT", "/api/2026/quarters/1", {}, empty_quarter()}).status == 415,
           "JSON content type required");
   std::filesystem::remove(path);
+}
+
+void paystub_sanity_warnings_are_nonblocking()
+{
+  const std::string path = database_path();
+  FixedClock clock("2026-03-31");
+  ApiApplication app(path, path + ".backups", clock);
+  std::string input = paystub_quarter("null");
+  input.replace(input.find("\"federal_withholding_ytd_cents\":30"), 34, "\"federal_withholding_ytd_cents\":151");
+  const ApiResponse response = app.handle(json_request("PUT", "/api/2026/quarters/1", input));
+  require(response.status == 200 && response.body.find("withholding_unusually_high") != std::string::npos &&
+              response.body.find("paystubs.spouse_1.federal_withholding_ytd_cents") != std::string::npos,
+          "sanity warning serializes without blocking save");
+  std::filesystem::remove(path);
+  std::filesystem::remove_all(path + ".backups");
+}
+
+void projection_end_date_api_and_backup_round_trip()
+{
+  const std::string path = database_path();
+  FixedClock clock("2026-03-31");
+  ApiApplication app(path, path + ".backups", clock);
+  const ApiResponse saved = app.handle(json_request("PUT", "/api/2026/quarters/1", paystub_quarter("\"2026-10-31\"")));
+  require(saved.status == 200 && saved.body.find("\"projection_end_date\":\"2026-10-31\"") != std::string::npos &&
+              saved.body.find("\"projection_horizon\":\"2026-10-31\"") != std::string::npos,
+          "API returns canonical end date and projection detail");
+  const ApiResponse invalid = app.handle(json_request("PUT", "/api/2026/quarters/1", paystub_quarter("\"2026-03-30\"")));
+  require(invalid.status == 422 && invalid.body.find("paystubs.spouse_1.projection_end_date") != std::string::npos,
+          "API returns end-date field validation");
+  std::string future_paystub = paystub_quarter("null");
+  future_paystub.replace(future_paystub.find("2026-03-31"), 10, "2026-04-01");
+  const ApiResponse future = app.handle(json_request("PUT", "/api/2026/quarters/1", future_paystub));
+  require(future.status == 422 && future.body.find("paystubs.spouse_1.date") != std::string::npos,
+          "API returns future paystub date field validation");
+  const ApiResponse backup = app.handle({"GET", "/api/backup", {}, {}});
+  require(app.handle(json_request("PUT", "/api/2026/quarters/1", empty_quarter())).status == 200, "clear saved paystub");
+  require(app.handle({"POST", "/api/restore", {{"Content-Type", "application/vnd.sqlite3"}}, backup.body}).status == 200,
+          "restore projection-end-date backup");
+  require(app.handle({"GET", "/api/2026/quarters/1", {}, {}}).body.find("\"projection_end_date\":\"2026-10-31\"") != std::string::npos,
+          "backup restore preserves end date");
+  std::filesystem::remove(path);
+  std::filesystem::remove_all(path + ".backups");
 }
 
 void household_rules_and_snapshots()
@@ -265,6 +313,8 @@ int main()
   const std::pair<const char*, std::function<void()>> tests[] = {
       {"bootstrap serialization", bootstrap_and_complete_serialization},
       {"quarter strictness", quarter_strictness_validation_and_rollback},
+      {"paystub sanity warnings", paystub_sanity_warnings_are_nonblocking},
+      {"projection end-date API and backup", projection_end_date_api_and_backup_round_trip},
       {"resources", household_rules_and_snapshots},
       {"backup restore", backup_restore_and_failed_restore_atomicity},
   };

@@ -9,7 +9,7 @@ const color = { blocking: 'error', caution: 'warning', information: 'info', info
 
 <template>
   <ul v-if="warnings.length" class="warning-list" aria-label="Estimate notices">
-    <li v-for="warning in warnings" :key="`${warning.code}-${warning.path}`">
+    <li v-for="(warning, index) in warnings" :key="`${warning.code}-${warning.path}-${index}`">
       <UAlert :icon="icon[warning.severity]" :color="color[warning.severity]" :title="warning.code" :description="warning.message" />
     </li>
   </ul>

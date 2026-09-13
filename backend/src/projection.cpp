@@ -84,12 +84,15 @@ struct SelectedPaystub {
   throw ProjectionError("pay frequency is invalid");
 }
 
-[[nodiscard]] int remaining_periods(const Date& paystub_date, const std::string& frequency)
+[[nodiscard]] int completed_periods(const Date& date, const std::string& frequency)
 {
-  const int periods = periods_per_year(frequency);
   constexpr int days_in_2026 = 365;
-  const int completed = (paystub_date.day_of_year * periods + days_in_2026 - 1) / days_in_2026;
-  return std::max(0, periods - completed);
+  return (date.day_of_year * periods_per_year(frequency) + days_in_2026 - 1) / days_in_2026;
+}
+
+[[nodiscard]] int remaining_periods(const Date& paystub_date, const Date& horizon, const std::string& frequency)
+{
+  return std::max(0, completed_periods(horizon, frequency) - completed_periods(paystub_date, frequency));
 }
 
 void add_warning(std::vector<ProjectionWarning>& warnings, WarningSeverity severity, std::string code,
@@ -119,7 +122,8 @@ void validate_inputs(const TaxYearInputs& inputs, const Date& as_of)
     for (const SpouseKey spouse : {SpouseKey::spouse_1, SpouseKey::spouse_2}) {
       if (const auto& paystub = paystub_for(quarter, spouse)) {
         if (parse_2026_date(paystub->date, "paystub date").value > as_of.value) {
-          throw ProjectionError("paystub date is after the as-of date");
+          const char* key = spouse == SpouseKey::spouse_1 ? "spouse_1" : "spouse_2";
+          throw ValidationError("paystub date is after the as-of date", std::string("paystubs.") + key + ".date", "date_after_as_of");
         }
       }
     }
@@ -147,6 +151,65 @@ void validate_inputs(const TaxYearInputs& inputs, const Date& as_of)
     }
   }
   return selected;
+}
+
+void add_withholding_warnings(const PaystubSnapshot& paystub, SpouseKey spouse, std::vector<ProjectionWarning>& warnings)
+{
+  const std::string path = std::string("paystubs.") + (spouse == SpouseKey::spouse_1 ? "spouse_1" : "spouse_2") + ".";
+  const auto check = [&](Cents withholding, Cents wages, std::string_view jurisdiction, std::string_view field) {
+    if (withholding > wages) {
+      add_warning(warnings, WarningSeverity::caution, "withholding_exceeds_taxable_wages", path + std::string(field),
+                  std::string(jurisdiction) + " withholding exceeds " + std::string(jurisdiction) + " taxable wages. Verify that income-tax withholding was entered rather than total payroll taxes.");
+    }
+    if (withholding > wages / 2) {
+      add_warning(warnings, WarningSeverity::caution, "withholding_unusually_high", path + std::string(field),
+                  std::string(jurisdiction) + " withholding is unusually high relative to taxable wages. Verify that income-tax withholding was entered rather than total payroll taxes.");
+    }
+  };
+  check(paystub.federal_withholding_ytd_cents, paystub.federal_taxable_wages_ytd_cents, "Federal", "federal_withholding_ytd_cents");
+  check(paystub.california_withholding_ytd_cents, paystub.california_taxable_wages_ytd_cents, "California", "california_withholding_ytd_cents");
+
+  const Cents larger_wages = std::max(paystub.federal_taxable_wages_ytd_cents, paystub.california_taxable_wages_ytd_cents);
+  const Cents difference = larger_wages - std::min(paystub.federal_taxable_wages_ytd_cents, paystub.california_taxable_wages_ytd_cents);
+  if (difference > std::max<Cents>(1'000'000, larger_wages / 10)) {
+    add_warning(warnings, WarningSeverity::caution, "federal_california_wages_materially_differ", path + "federal_taxable_wages_ytd_cents",
+                "Federal and California taxable wages differ materially. HSA treatment and state-specific adjustments may explain the difference.");
+  }
+}
+
+void add_cross_quarter_warnings(const TaxYearInputs& inputs, SpouseKey spouse, std::vector<ProjectionWarning>& warnings)
+{
+  struct DatedPaystub { const PaystubSnapshot* paystub; Date date; };
+  std::vector<DatedPaystub> paystubs;
+  for (const auto& quarter : inputs.quarters) {
+    if (const auto& paystub = paystub_for(quarter, spouse)) paystubs.push_back({&*paystub, parse_2026_date(paystub->date, "paystub date")});
+  }
+  std::sort(paystubs.begin(), paystubs.end(), [](const DatedPaystub& left, const DatedPaystub& right) { return left.date.value < right.date.value; });
+  const std::string path = std::string("paystubs.") + (spouse == SpouseKey::spouse_1 ? "spouse_1" : "spouse_2") + ".";
+  const auto warn_decrease = [&](Cents earlier, Cents later, std::string_view field, std::string_view label) {
+    if (later < earlier) {
+      add_warning(warnings, WarningSeverity::caution, "paystub_ytd_decreased", path + std::string(field),
+                  std::string(label) + " decreased from an earlier paystub. A payroll correction or job transition may explain this, but the current single-pay-source model does not fully represent job transitions.");
+    }
+  };
+  for (size_t index = 1; index < paystubs.size(); ++index) {
+    const auto& earlier = *paystubs[index - 1].paystub;
+    const auto& later = *paystubs[index].paystub;
+    warn_decrease(earlier.federal_taxable_wages_ytd_cents, later.federal_taxable_wages_ytd_cents, "federal_taxable_wages_ytd_cents", "Federal taxable wages YTD");
+    warn_decrease(earlier.california_taxable_wages_ytd_cents, later.california_taxable_wages_ytd_cents, "california_taxable_wages_ytd_cents", "California taxable wages YTD");
+    warn_decrease(earlier.federal_withholding_ytd_cents, later.federal_withholding_ytd_cents, "federal_withholding_ytd_cents", "Federal withholding YTD");
+    warn_decrease(earlier.california_withholding_ytd_cents, later.california_withholding_ytd_cents, "california_withholding_ytd_cents", "California withholding YTD");
+  }
+}
+
+void add_sanity_warnings(const TaxYearInputs& inputs, std::vector<ProjectionWarning>& warnings)
+{
+  for (const SpouseKey spouse : {SpouseKey::spouse_1, SpouseKey::spouse_2}) {
+    for (const auto& quarter : inputs.quarters) {
+      if (const auto& paystub = paystub_for(quarter, spouse)) add_withholding_warnings(*paystub, spouse, warnings);
+    }
+    add_cross_quarter_warnings(inputs, spouse, warnings);
+  }
 }
 
 [[nodiscard]] const PaystubSnapshot* earlier_regular_paystub(const TaxYearInputs& inputs, SpouseKey spouse,
@@ -225,11 +288,24 @@ void validate_inputs(const TaxYearInputs& inputs, const Date& as_of)
 
   const PaystubSnapshot& paystub = *authoritative->paystub;
   projection.authoritative_quarter = authoritative->quarter;
+  projection.authoritative_paystub_date = paystub.date;
+  projection.pay_frequency = paystub.pay_frequency;
+  const Date horizon = paystub.projection_end_date ? parse_2026_date(*paystub.projection_end_date, "projection end date")
+                                                   : parse_2026_date("2026-12-31", "projection horizon");
+  projection.projection_horizon = paystub.projection_end_date ? paystub.projection_end_date : std::optional<std::string>{"2026-12-31"};
+  projection.completed_pay_periods_at_paystub = completed_periods(authoritative->date, paystub.pay_frequency);
+  projection.completed_pay_periods_at_horizon = completed_periods(horizon, paystub.pay_frequency);
   if (authoritative->quarter < as_of.quarter) {
     add_warning(warnings, WarningSeverity::caution, "missing_current_quarter_paystub", "paystubs." + key,
                 "No paystub was entered for the current quarter.");
   }
-  projection.remaining_pay_periods = remaining_periods(authoritative->date, paystub.pay_frequency);
+  projection.remaining_pay_periods = remaining_periods(authoritative->date, horizon, paystub.pay_frequency);
+  if (paystub.projection_end_date &&
+      projection.remaining_pay_periods < remaining_periods(authoritative->date, parse_2026_date("2026-12-31", "projection horizon"), paystub.pay_frequency)) {
+    add_warning(warnings, WarningSeverity::information, "pay_pattern_projection_limited", "paystubs." + key,
+                (spouse == SpouseKey::spouse_1 ? "Spouse 1 regular wages and withholding are projected only through the selected pay-pattern end date."
+                                              : "Spouse 2 regular wages and withholding are projected only through the selected pay-pattern end date."));
+  }
   const int age_days = static_cast<int>((as_of.value - authoritative->date.value).count());
   if (age_days > stale_after_days(paystub.pay_frequency)) {
     add_warning(warnings, WarningSeverity::caution, "stale_paystub", "paystubs." + key,
@@ -296,6 +372,7 @@ AnnualProjection project_annual(const TaxYearInputs& inputs, const std::string& 
   validate_inputs(inputs, as_of);
 
   AnnualProjection projection;
+  add_sanity_warnings(inputs, projection.warnings);
   projection.spouses[0] = project_spouse(inputs, SpouseKey::spouse_1, as_of, projection.warnings);
   projection.spouses[1] = project_spouse(inputs, SpouseKey::spouse_2, as_of, projection.warnings);
   projection.federal_wages = sum_amounts(projection.spouses, &SpouseProjection::federal_wages);

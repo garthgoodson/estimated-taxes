@@ -38,6 +38,8 @@ const calculation = computed(() => {
 })
 const validationError = computed(() => calculation.value?.valid === false ? calculation.value.message : null)
 const result = computed(() => calculation.value?.valid ? calculation.value.calculation : null)
+const taxableWagesSubstantiallyBelowGross = computed(() => result.value !== null && grossEarnings.value !== null &&
+  result.value.federal_taxable_wages_cents < grossEarnings.value / 2)
 
 function reset() {
   grossEarnings.value = null
@@ -86,6 +88,7 @@ watch(() => props.open, open => {
           <MoneyInput v-model="otherSharedDeductions" class="wide" label="Other shared deductions" />
         </div>
         <UAlert v-if="validationError" color="error" :description="validationError" />
+        <UAlert v-if="taxableWagesSubstantiallyBelowGross" color="warning" title="Check this value" description="Taxable wages are substantially below gross earnings. Verify that Roth contributions, taxes, and post-tax deductions were not subtracted." />
         <section v-if="result" class="breakdown" aria-labelledby="arithmetic-heading">
           <h3 id="arithmetic-heading">Arithmetic</h3>
           <dl>

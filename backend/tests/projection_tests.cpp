@@ -94,7 +94,7 @@ void test_future_and_duplicate_paystubs()
 {
   auto future = inputs();
   future.quarters[1].spouse_1_paystub = paystub("2026-06-30");
-  require_throws<ProjectionError>([&] { static_cast<void>(project_annual(future, "2026-06-15")); }, "future paystub rejected");
+  require_throws<ValidationError>([&] { static_cast<void>(project_annual(future, "2026-06-15")); }, "future paystub rejected");
   auto duplicate = inputs();
   duplicate.quarters[0].spouse_1_paystub = paystub("2026-03-01", "monthly", 100, 0, 10, 5, 500);
   duplicate.quarters[1].spouse_1_paystub = paystub("2026-03-01", "monthly", 200, 0, 20, 10, 700);
@@ -149,6 +149,63 @@ void test_zero_wage_adjustments_are_not_projected()
   }
 }
 
+void test_projection_end_dates()
+{
+  auto year = inputs();
+  year.quarters[1].spouse_1_paystub = paystub("2026-06-01", "monthly", 100, 0, 10, 5, 1'000, 1'100, 100, 50);
+  const auto unlimited = project_annual(year, "2026-06-15");
+  year.quarters[1].spouse_1_paystub->projection_end_date = "2026-06-01";
+  const auto ended = project_annual(year, "2026-06-15");
+  require(ended.spouses[0].remaining_pay_periods == 0 && ended.spouses[0].federal_wages.projected_remaining_cents == 0 &&
+              ended.spouses[0].federal_withholding.projected_remaining_cents == 0 && has_warning(ended, "pay_pattern_projection_limited"),
+          "paystub-date horizon stops future projection");
+  year.quarters[1].spouse_1_paystub->projection_end_date = "2026-10-31";
+  const auto limited = project_annual(year, "2026-06-15");
+  require(limited.spouses[0].remaining_pay_periods == 5 && limited.spouses[0].federal_wages.projected_remaining_cents == 500 &&
+              limited.spouses[0].california_withholding.projected_remaining_cents == 25,
+          "intermediate horizon shortens wages and withholding");
+  year.quarters[1].spouse_1_paystub->projection_end_date = "2026-12-31";
+  require(project_annual(year, "2026-06-15").spouses[0].remaining_pay_periods == unlimited.spouses[0].remaining_pay_periods,
+          "year-end horizon matches null");
+  year.quarters[1].spouse_1_paystub->projection_end_date = "2026-05-31";
+  require_throws<ValidationError>([&] { static_cast<void>(project_annual(year, "2026-06-15")); }, "end before paystub rejected");
+  year.quarters[1].spouse_1_paystub->projection_end_date = "2027-01-01";
+  require_throws<ValidationError>([&] { static_cast<void>(project_annual(year, "2026-06-15")); }, "end outside year rejected");
+}
+
+void test_paystub_sanity_warnings()
+{
+  auto ratio = inputs();
+  ratio.quarters[1].spouse_1_paystub = paystub("2026-06-01", "monthly", 100, 0, 10, 5, 200, 200, 100, 100);
+  require(!has_warning(project_annual(ratio, "2026-06-15"), "withholding_unusually_high"), "50 percent withholding does not warn");
+  ratio.quarters[1].spouse_1_paystub->federal_withholding_ytd_cents = 101;
+  require(has_warning(project_annual(ratio, "2026-06-15"), "withholding_unusually_high"), "withholding above 50 percent warns");
+  ratio.quarters[1].spouse_1_paystub->federal_withholding_ytd_cents = 201;
+  require(has_warning(project_annual(ratio, "2026-06-15"), "withholding_exceeds_taxable_wages"), "withholding above wages warns");
+
+  auto difference = inputs();
+  difference.quarters[1].spouse_1_paystub = paystub("2026-06-01", "monthly", 100, 0, 10, 5, 2'000'000, 1'000'000);
+  require(!has_warning(project_annual(difference, "2026-06-15"), "federal_california_wages_materially_differ"), "exact material wage threshold does not warn");
+  difference.quarters[1].spouse_1_paystub->federal_taxable_wages_ytd_cents = 2'000'001;
+  require(has_warning(project_annual(difference, "2026-06-15"), "federal_california_wages_materially_differ"), "wage difference above material threshold warns");
+  difference.quarters[1].spouse_1_paystub->federal_taxable_wages_ytd_cents = 20'000'000;
+  difference.quarters[1].spouse_1_paystub->california_taxable_wages_ytd_cents = 18'000'000;
+  require(!has_warning(project_annual(difference, "2026-06-15"), "federal_california_wages_materially_differ"), "exact percentage material threshold does not warn");
+  difference.quarters[1].spouse_1_paystub->california_taxable_wages_ytd_cents = 17'999'999;
+  require(has_warning(project_annual(difference, "2026-06-15"), "federal_california_wages_materially_differ"), "wage difference above percentage threshold warns");
+
+  auto chronological = inputs();
+  chronological.quarters[0].spouse_1_paystub = paystub("2026-06-01", "monthly", 100, 0, 10, 5, 900, 900, 90, 45);
+  chronological.quarters[1].spouse_1_paystub = paystub("2026-03-01", "monthly", 100, 0, 10, 5, 300, 300, 30, 15);
+  require(!has_warning(project_annual(chronological, "2026-06-15"), "paystub_ytd_decreased"), "comparison follows paystub date rather than quarter order");
+  chronological.quarters[1].spouse_1_paystub->date = "2026-07-01";
+  chronological.quarters[1].spouse_1_paystub->federal_taxable_wages_ytd_cents = 800;
+  chronological.quarters[1].spouse_1_paystub->federal_withholding_ytd_cents = 80;
+  require(has_warning(project_annual(chronological, "2026-07-15"), "paystub_ytd_decreased"), "chronologically later decreases warn");
+  auto missing = inputs();
+  require(!has_warning(project_annual(missing, "2026-06-15"), "paystub_ytd_decreased"), "missing paystubs do not compare");
+}
+
 void test_investments_and_missing_warnings()
 {
   auto year = inputs();
@@ -196,6 +253,8 @@ int main()
       {"future and duplicate paystubs", test_future_and_duplicate_paystubs},
       {"regular, bonus, and withholding fallbacks", test_regular_bonus_and_fallbacks},
       {"zero-wage withholding adjustments", test_zero_wage_adjustments_are_not_projected},
+      {"projection end dates", test_projection_end_dates},
+      {"paystub sanity warnings", test_paystub_sanity_warnings},
       {"investments and missing warnings", test_investments_and_missing_warnings},
       {"stale, missing, and overflow", test_stale_missing_and_overflow},
   };

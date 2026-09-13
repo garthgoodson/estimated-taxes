@@ -11,7 +11,7 @@
 namespace estimated_taxes {
 namespace {
 
-constexpr int kSchemaVersion = 3;
+constexpr int kSchemaVersion = 4;
 
 bool valid_date(const std::string& value, int first_year = 2026, int last_year = 2026)
 {
@@ -26,37 +26,51 @@ bool valid_date(const std::string& value, int first_year = 2026, int last_year =
          std::chrono::year_month_day{std::chrono::year{year}, std::chrono::month{month}, std::chrono::day{day}}.ok();
 }
 
-void require_nonnegative(Cents value, std::string_view field)
+void require_nonnegative(Cents value, std::string_view field, std::string path = "request")
 {
-  if (value < 0) throw ValidationError(std::string(field) + " cannot be negative");
+  if (value < 0) throw ValidationError(std::string(field) + " cannot be negative", std::move(path));
 }
 
-void validate_paystub(const PaystubSnapshot& paystub)
+void validate_paystub(const PaystubSnapshot& paystub, std::string_view path)
 {
-  if (!valid_date(paystub.date)) throw ValidationError("paystub date must use YYYY-MM-DD");
+  if (!valid_date(paystub.date)) throw ValidationError("paystub date must use YYYY-MM-DD", std::string(path) + ".date");
+  if (paystub.projection_end_date) {
+    if (!valid_date(*paystub.projection_end_date)) {
+      throw ValidationError("projection end date must use YYYY-MM-DD", std::string(path) + ".projection_end_date");
+    }
+    if (*paystub.projection_end_date < paystub.date) {
+      throw ValidationError("projection end date must not precede the paystub date", std::string(path) + ".projection_end_date");
+    }
+  }
   if (paystub.pay_frequency != "weekly" && paystub.pay_frequency != "biweekly" &&
       paystub.pay_frequency != "semimonthly" && paystub.pay_frequency != "monthly") {
     throw ValidationError("paystub pay frequency is invalid");
   }
   for (const auto [value, field] : std::array{
-           std::pair{paystub.current_period_regular_wages_cents, "current-period regular wages"},
-           std::pair{paystub.current_period_bonus_wages_cents, "current-period bonus wages"},
-           std::pair{paystub.current_period_federal_withholding_cents, "current-period federal withholding"},
-           std::pair{paystub.current_period_california_withholding_cents, "current-period California withholding"},
-           std::pair{paystub.federal_taxable_wages_ytd_cents, "federal taxable wages YTD"},
-           std::pair{paystub.california_taxable_wages_ytd_cents, "California taxable wages YTD"},
-           std::pair{paystub.federal_withholding_ytd_cents, "federal withholding YTD"},
-           std::pair{paystub.california_withholding_ytd_cents, "California withholding YTD"},
-           std::pair{paystub.social_security_withholding_ytd_cents, "Social Security withholding YTD"},
-           std::pair{paystub.medicare_withholding_ytd_cents, "Medicare withholding YTD"},
-           std::pair{paystub.california_sdi_withholding_ytd_cents, "California SDI withholding YTD"}}) {
-    require_nonnegative(value, field);
+           std::pair{paystub.current_period_regular_wages_cents, "current_period_regular_wages_cents"},
+           std::pair{paystub.current_period_bonus_wages_cents, "current_period_bonus_wages_cents"},
+           std::pair{paystub.current_period_federal_withholding_cents, "current_period_federal_withholding_cents"},
+           std::pair{paystub.current_period_california_withholding_cents, "current_period_california_withholding_cents"},
+           std::pair{paystub.federal_taxable_wages_ytd_cents, "federal_taxable_wages_ytd_cents"},
+           std::pair{paystub.california_taxable_wages_ytd_cents, "california_taxable_wages_ytd_cents"},
+           std::pair{paystub.federal_withholding_ytd_cents, "federal_withholding_ytd_cents"},
+           std::pair{paystub.california_withholding_ytd_cents, "california_withholding_ytd_cents"},
+           std::pair{paystub.social_security_withholding_ytd_cents, "social_security_withholding_ytd_cents"},
+           std::pair{paystub.medicare_withholding_ytd_cents, "medicare_withholding_ytd_cents"},
+           std::pair{paystub.california_sdi_withholding_ytd_cents, "california_sdi_withholding_ytd_cents"}}) {
+    require_nonnegative(value, field, std::string(path) + "." + field);
   }
-  if (paystub.federal_taxable_wages_ytd_cents < paystub.current_period_regular_wages_cents + paystub.current_period_bonus_wages_cents ||
-      paystub.california_taxable_wages_ytd_cents < paystub.current_period_regular_wages_cents + paystub.current_period_bonus_wages_cents ||
-      paystub.federal_withholding_ytd_cents < paystub.current_period_federal_withholding_cents ||
-      paystub.california_withholding_ytd_cents < paystub.current_period_california_withholding_cents) {
-    throw ValidationError("paystub current-period values cannot exceed YTD values");
+  if (paystub.current_period_regular_wages_cents > paystub.federal_taxable_wages_ytd_cents - paystub.current_period_bonus_wages_cents) {
+    throw ValidationError("current regular wages plus bonus cannot exceed federal taxable wages YTD", std::string(path) + ".federal_taxable_wages_ytd_cents");
+  }
+  if (paystub.current_period_regular_wages_cents > paystub.california_taxable_wages_ytd_cents - paystub.current_period_bonus_wages_cents) {
+    throw ValidationError("current regular wages plus bonus cannot exceed California taxable wages YTD", std::string(path) + ".california_taxable_wages_ytd_cents");
+  }
+  if (paystub.current_period_federal_withholding_cents > paystub.federal_withholding_ytd_cents) {
+    throw ValidationError("current federal withholding cannot exceed federal withholding YTD", std::string(path) + ".federal_withholding_ytd_cents");
+  }
+  if (paystub.current_period_california_withholding_cents > paystub.california_withholding_ytd_cents) {
+    throw ValidationError("current California withholding cannot exceed California withholding YTD", std::string(path) + ".california_withholding_ytd_cents");
   }
 }
 
@@ -123,8 +137,8 @@ void validate(const Household& household)
 void validate(const QuarterInput& quarter)
 {
   if (quarter.quarter < 1 || quarter.quarter > 4) throw ValidationError("quarter must be between 1 and 4");
-  if (quarter.spouse_1_paystub) validate_paystub(*quarter.spouse_1_paystub);
-  if (quarter.spouse_2_paystub) validate_paystub(*quarter.spouse_2_paystub);
+  if (quarter.spouse_1_paystub) validate_paystub(*quarter.spouse_1_paystub, "paystubs.spouse_1");
+  if (quarter.spouse_2_paystub) validate_paystub(*quarter.spouse_2_paystub, "paystubs.spouse_2");
   if (quarter.investments) validate_investments(*quarter.investments);
   validate_payment(quarter.federal_payment);
   validate_payment(quarter.california_payment);
@@ -142,7 +156,7 @@ InputStore::InputStore(const std::string& path) : connection_(std::make_unique<C
     database.execute("CREATE TABLE household (id INTEGER PRIMARY KEY CHECK (id = 1), tax_year INTEGER NOT NULL CHECK (tax_year = 2026), filing_status TEXT NOT NULL CHECK (filing_status = 'married_filing_jointly'), residency TEXT NOT NULL CHECK (residency = 'california_full_year'));"
                      "CREATE TABLE spouses (spouse_key TEXT PRIMARY KEY CHECK (spouse_key IN ('spouse_1', 'spouse_2')), household_id INTEGER NOT NULL REFERENCES household(id), label TEXT NOT NULL CHECK (length(label) > 0), age_65_or_older INTEGER NOT NULL CHECK (age_65_or_older IN (0, 1)), blind INTEGER NOT NULL CHECK (blind IN (0, 1)));"
                      "CREATE TABLE quarters (quarter INTEGER PRIMARY KEY CHECK (quarter BETWEEN 1 AND 4));"
-                     "CREATE TABLE paystubs (quarter INTEGER NOT NULL REFERENCES quarters(quarter) ON DELETE CASCADE, spouse_key TEXT NOT NULL REFERENCES spouses(spouse_key), date TEXT NOT NULL, pay_frequency TEXT NOT NULL CHECK (pay_frequency IN ('weekly','biweekly','semimonthly','monthly')), current_period_regular_wages_cents INTEGER NOT NULL CHECK (current_period_regular_wages_cents >= 0), current_period_bonus_wages_cents INTEGER NOT NULL CHECK (current_period_bonus_wages_cents >= 0), current_period_federal_withholding_cents INTEGER NOT NULL CHECK (current_period_federal_withholding_cents >= 0), current_period_california_withholding_cents INTEGER NOT NULL CHECK (current_period_california_withholding_cents >= 0), federal_taxable_wages_ytd_cents INTEGER NOT NULL CHECK (federal_taxable_wages_ytd_cents >= 0), california_taxable_wages_ytd_cents INTEGER NOT NULL CHECK (california_taxable_wages_ytd_cents >= 0), federal_withholding_ytd_cents INTEGER NOT NULL CHECK (federal_withholding_ytd_cents >= 0), california_withholding_ytd_cents INTEGER NOT NULL CHECK (california_withholding_ytd_cents >= 0), social_security_withholding_ytd_cents INTEGER NOT NULL CHECK (social_security_withholding_ytd_cents >= 0), medicare_withholding_ytd_cents INTEGER NOT NULL CHECK (medicare_withholding_ytd_cents >= 0), california_sdi_withholding_ytd_cents INTEGER NOT NULL CHECK (california_sdi_withholding_ytd_cents >= 0), PRIMARY KEY (quarter, spouse_key));"
+                     "CREATE TABLE paystubs (quarter INTEGER NOT NULL REFERENCES quarters(quarter) ON DELETE CASCADE, spouse_key TEXT NOT NULL REFERENCES spouses(spouse_key), date TEXT NOT NULL, pay_frequency TEXT NOT NULL CHECK (pay_frequency IN ('weekly','biweekly','semimonthly','monthly')), current_period_regular_wages_cents INTEGER NOT NULL CHECK (current_period_regular_wages_cents >= 0), current_period_bonus_wages_cents INTEGER NOT NULL CHECK (current_period_bonus_wages_cents >= 0), current_period_federal_withholding_cents INTEGER NOT NULL CHECK (current_period_federal_withholding_cents >= 0), current_period_california_withholding_cents INTEGER NOT NULL CHECK (current_period_california_withholding_cents >= 0), federal_taxable_wages_ytd_cents INTEGER NOT NULL CHECK (federal_taxable_wages_ytd_cents >= 0), california_taxable_wages_ytd_cents INTEGER NOT NULL CHECK (california_taxable_wages_ytd_cents >= 0), federal_withholding_ytd_cents INTEGER NOT NULL CHECK (federal_withholding_ytd_cents >= 0), california_withholding_ytd_cents INTEGER NOT NULL CHECK (california_withholding_ytd_cents >= 0), social_security_withholding_ytd_cents INTEGER NOT NULL CHECK (social_security_withholding_ytd_cents >= 0), medicare_withholding_ytd_cents INTEGER NOT NULL CHECK (medicare_withholding_ytd_cents >= 0), california_sdi_withholding_ytd_cents INTEGER NOT NULL CHECK (california_sdi_withholding_ytd_cents >= 0), projection_end_date TEXT, PRIMARY KEY (quarter, spouse_key));"
                      "CREATE TABLE investments (quarter INTEGER PRIMARY KEY REFERENCES quarters(quarter) ON DELETE CASCADE, ordinary_dividends_cents INTEGER NOT NULL CHECK (ordinary_dividends_cents >= 0), qualified_dividends_cents INTEGER NOT NULL CHECK (qualified_dividends_cents >= 0 AND qualified_dividends_cents <= ordinary_dividends_cents), short_term_gain_cents INTEGER NOT NULL, long_term_gain_cents INTEGER NOT NULL, federal_withholding_cents INTEGER NOT NULL CHECK (federal_withholding_cents >= 0), california_withholding_cents INTEGER NOT NULL CHECK (california_withholding_cents >= 0), notes TEXT);"
                      "CREATE TABLE estimated_payments (quarter INTEGER NOT NULL REFERENCES quarters(quarter) ON DELETE CASCADE, jurisdiction TEXT NOT NULL CHECK (jurisdiction IN ('federal','california')), amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0), date TEXT, CHECK ((amount_cents = 0 AND date IS NULL) OR (amount_cents > 0 AND date IS NOT NULL)), PRIMARY KEY (quarter, jurisdiction));"
                      "INSERT INTO household VALUES (1, 2026, 'married_filing_jointly', 'california_full_year');"
@@ -150,6 +164,11 @@ InputStore::InputStore(const std::string& path) : connection_(std::make_unique<C
                      "INSERT INTO quarters VALUES (1), (2), (3), (4);"
                      "INSERT INTO estimated_payments VALUES (1, 'federal', 0, NULL), (1, 'california', 0, NULL), (2, 'federal', 0, NULL), (2, 'california', 0, NULL), (3, 'federal', 0, NULL), (3, 'california', 0, NULL), (4, 'federal', 0, NULL), (4, 'california', 0, NULL);"
                      "INSERT INTO schema_migrations VALUES (1)");
+  }
+  if (version.integer(0) >= 3 && version.integer(0) < kSchemaVersion) {
+    database.execute("ALTER TABLE paystubs ADD COLUMN projection_end_date TEXT");
+    sqlite::Statement migration(database.get(), "INSERT INTO schema_migrations(version) VALUES(4)");
+    migration.step_done("record paystub projection-end-date migration");
   }
   transaction.commit();
 }
@@ -195,12 +214,15 @@ QuarterInput InputStore::load_quarter(int quarter) const
 {
   if (quarter < 1 || quarter > 4) throw ValidationError("quarter must be between 1 and 4");
   QuarterInput input; input.quarter = quarter;
-  sqlite::Statement paystubs(connection_->sqlite.get(), "SELECT spouse_key,date,pay_frequency,current_period_regular_wages_cents,current_period_bonus_wages_cents,current_period_federal_withholding_cents,current_period_california_withholding_cents,federal_taxable_wages_ytd_cents,california_taxable_wages_ytd_cents,federal_withholding_ytd_cents,california_withholding_ytd_cents,social_security_withholding_ytd_cents,medicare_withholding_ytd_cents,california_sdi_withholding_ytd_cents FROM paystubs WHERE quarter=?");
+  sqlite::Statement paystubs(connection_->sqlite.get(), "SELECT spouse_key,date,pay_frequency,current_period_regular_wages_cents,current_period_bonus_wages_cents,current_period_federal_withholding_cents,current_period_california_withholding_cents,federal_taxable_wages_ytd_cents,california_taxable_wages_ytd_cents,federal_withholding_ytd_cents,california_withholding_ytd_cents,social_security_withholding_ytd_cents,medicare_withholding_ytd_cents,california_sdi_withholding_ytd_cents,projection_end_date FROM paystubs WHERE quarter=?");
   paystubs.bind_integer(1, quarter);
   while (paystubs.step_row()) {
-    PaystubSnapshot value{paystubs.required_text(1, "paystub date"), paystubs.required_text(2, "pay frequency")};
+    PaystubSnapshot value;
+    value.date = paystubs.required_text(1, "paystub date");
+    value.pay_frequency = paystubs.required_text(2, "pay frequency");
     Cents* fields[] = {&value.current_period_regular_wages_cents,&value.current_period_bonus_wages_cents,&value.current_period_federal_withholding_cents,&value.current_period_california_withholding_cents,&value.federal_taxable_wages_ytd_cents,&value.california_taxable_wages_ytd_cents,&value.federal_withholding_ytd_cents,&value.california_withholding_ytd_cents,&value.social_security_withholding_ytd_cents,&value.medicare_withholding_ytd_cents,&value.california_sdi_withholding_ytd_cents};
     for (int index = 0; index < 11; ++index) *fields[index] = paystubs.integer(index + 3);
+    value.projection_end_date = paystubs.optional_text(14);
     if (spouse_key(paystubs.required_text(0, "paystub spouse key")) == SpouseKey::spouse_1) input.spouse_1_paystub = value; else input.spouse_2_paystub = value;
   }
   sqlite::Statement investments(connection_->sqlite.get(), "SELECT ordinary_dividends_cents,qualified_dividends_cents,short_term_gain_cents,long_term_gain_cents,federal_withholding_cents,california_withholding_cents,notes FROM investments WHERE quarter=?");
@@ -228,12 +250,13 @@ void InputStore::replace_quarter(const QuarterInput& quarter)
     sqlite::Statement clear(connection_->sqlite.get(), (std::string("DELETE FROM ") + table + " WHERE quarter=?").c_str());
     clear.bind_integer(1, quarter.quarter); clear.step_done("clear quarter inputs");
   }
-  sqlite::Statement insert(connection_->sqlite.get(), "INSERT INTO paystubs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  sqlite::Statement insert(connection_->sqlite.get(), "INSERT INTO paystubs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
   for (const auto [key, value] : {std::pair{SpouseKey::spouse_1, &quarter.spouse_1_paystub}, std::pair{SpouseKey::spouse_2, &quarter.spouse_2_paystub}}) {
     if (!*value) continue;
     insert.bind_integer(1, quarter.quarter); insert.bind_text(2, spouse_name(key)); insert.bind_text(3, (*value)->date); insert.bind_text(4, (*value)->pay_frequency);
     const Cents values[] = {(*value)->current_period_regular_wages_cents,(*value)->current_period_bonus_wages_cents,(*value)->current_period_federal_withholding_cents,(*value)->current_period_california_withholding_cents,(*value)->federal_taxable_wages_ytd_cents,(*value)->california_taxable_wages_ytd_cents,(*value)->federal_withholding_ytd_cents,(*value)->california_withholding_ytd_cents,(*value)->social_security_withholding_ytd_cents,(*value)->medicare_withholding_ytd_cents,(*value)->california_sdi_withholding_ytd_cents};
     for (int index = 0; index < 11; ++index) insert.bind_integer(index + 5, values[index]);
+    if ((*value)->projection_end_date) insert.bind_text(16, *(*value)->projection_end_date); else insert.bind_null(16);
     insert.step_done("insert paystub"); insert.reset();
   }
   if (quarter.investments) {

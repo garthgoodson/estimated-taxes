@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { ApiValidationField, ApiWarning, PaystubInput } from '~/types/api'
 
 type GrossPayApply =
@@ -9,11 +9,30 @@ type GrossPayApply =
 const props = defineProps<{ modelValue: PaystubInput | null; spouse: 'spouse_1' | 'spouse_2'; label: string; warnings: ApiWarning[]; errors: ApiValidationField[] }>()
 const emit = defineEmits<{ 'update:modelValue': [value: PaystubInput | null] }>()
 const frequencies = [{ label: 'Weekly', value: 'weekly' }, { label: 'Biweekly', value: 'biweekly' }, { label: 'Semimonthly', value: 'semimonthly' }, { label: 'Monthly', value: 'monthly' }]
+const projectionModes = [{ label: 'Continue through year end', value: 'year_end' }, { label: 'End after this paystub', value: 'after_paystub' }, { label: 'End on date', value: 'date' }]
+const selectedProjectionMode = ref<'year_end' | 'after_paystub' | 'date'>('year_end')
+const projectionMode = computed(() => selectedProjectionMode.value)
+watch(() => props.modelValue?.projection_end_date, () => {
+  selectedProjectionMode.value = !props.modelValue?.projection_end_date ? 'year_end'
+    : props.modelValue.projection_end_date === props.modelValue.date ? 'after_paystub' : 'date'
+}, { immediate: true })
 const currentPeriodCalculatorOpen = ref(false)
 const yearToDateCalculatorOpen = ref(false)
 
 function update<K extends keyof PaystubInput>(field: K, value: PaystubInput[K]) {
   if (props.modelValue) emit('update:modelValue', { ...props.modelValue, [field]: value })
+}
+function updatePaystubDate(date: string) {
+  if (!props.modelValue) return
+  emit('update:modelValue', { ...props.modelValue, date, projection_end_date: props.modelValue.projection_end_date === props.modelValue.date ? date : props.modelValue.projection_end_date })
+}
+function updateProjectionMode(mode: 'year_end' | 'after_paystub' | 'date') {
+  if (!props.modelValue) return
+  selectedProjectionMode.value = mode
+  const projection_end_date = mode === 'year_end' ? null
+    : mode === 'after_paystub' ? props.modelValue.date
+      : props.modelValue.projection_end_date ?? '2026-12-31'
+  emit('update:modelValue', { ...props.modelValue, projection_end_date })
 }
 function applyGrossPayCalculation(value: GrossPayApply) {
   if (!props.modelValue) return
@@ -32,7 +51,7 @@ function fieldLabel(field: string, prefix = '', suffix = ''): string {
   return field.replace(prefix, '').replace(suffix, '').replace('_cents', '').split('_').map(word => word === 'sdi' ? 'SDI' : `${word[0]?.toUpperCase()}${word.slice(1)}`).join(' ')
 }
 function createPaystub(): PaystubInput {
-  return { date: '', pay_frequency: 'biweekly', current_period_regular_wages_cents: 0, current_period_bonus_wages_cents: 0, current_period_federal_withholding_cents: 0, current_period_california_withholding_cents: 0, federal_taxable_wages_ytd_cents: 0, california_taxable_wages_ytd_cents: 0, federal_withholding_ytd_cents: 0, california_withholding_ytd_cents: 0, social_security_withholding_ytd_cents: 0, medicare_withholding_ytd_cents: 0, california_sdi_withholding_ytd_cents: 0 }
+  return { date: '', pay_frequency: 'biweekly', projection_end_date: null, current_period_regular_wages_cents: 0, current_period_bonus_wages_cents: 0, current_period_federal_withholding_cents: 0, current_period_california_withholding_cents: 0, federal_taxable_wages_ytd_cents: 0, california_taxable_wages_ytd_cents: 0, federal_withholding_ytd_cents: 0, california_withholding_ytd_cents: 0, social_security_withholding_ytd_cents: 0, medicare_withholding_ytd_cents: 0, california_sdi_withholding_ytd_cents: 0 }
 }
 </script>
 
@@ -40,8 +59,15 @@ function createPaystub(): PaystubInput {
   <UCard>
     <template #header><h2>{{ label }} paystub</h2></template>
     <div v-if="modelValue" class="form-grid">
-      <UFormField label="Paystub date"><UInput :model-value="modelValue.date" type="date" @update:model-value="update('date', String($event))" /></UFormField>
+      <UFormField label="Paystub date"><UInput :model-value="modelValue.date" type="date" @update:model-value="updatePaystubDate(String($event))" /></UFormField>
       <UFormField label="Pay frequency"><USelect :model-value="modelValue.pay_frequency" :items="frequencies" @update:model-value="update('pay_frequency', $event as PaystubInput['pay_frequency'])" /></UFormField>
+      <UFormField class="form-wide" label="Project this pay pattern through" :error="errorFor('projection_end_date')">
+        <template #label="{ label: projectionLabel }"><span class="projection-label">{{ projectionLabel }}<HelpTooltip :label="projectionLabel ?? 'pay-pattern projection'" text="Limits how long this paystub’s regular wages and withholding are repeated. It does not change wages or withholding already included in YTD totals. This estimator models one consolidated pay pattern per spouse and assumes no additional wages after the selected date." /></span></template>
+        <div class="projection-controls">
+          <USelect :model-value="projectionMode" :items="projectionModes" @update:model-value="updateProjectionMode($event as 'year_end' | 'after_paystub' | 'date')" />
+          <UInput v-if="projectionMode === 'date'" :model-value="modelValue.projection_end_date ?? undefined" type="date" @update:model-value="update('projection_end_date', String($event))" />
+        </div>
+      </UFormField>
 
       <p class="form-heading">Current pay period</p>
       <MoneyInput :model-value="modelValue.current_period_regular_wages_cents" label="Regular Wages" :backend-error="errorFor('current_period_regular_wages_cents')" @update:model-value="update('current_period_regular_wages_cents', $event as number)">
@@ -69,6 +95,8 @@ function createPaystub(): PaystubInput {
 
 <style scoped>
 h2, .form-heading { margin: 0; }
+.projection-label { align-items: center; display: inline-flex; gap: .25rem; }
+.projection-controls { align-items: center; display: flex; gap: .5rem; }
 .form-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-heading, .form-wide { grid-column: 1 / -1; }
 .form-heading { border-top: 1px solid var(--ui-border); color: var(--ui-text-muted); font-size: .875rem; font-weight: 700; padding-top: 1rem; }

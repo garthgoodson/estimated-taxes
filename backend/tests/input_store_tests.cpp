@@ -131,7 +131,8 @@ void test_complete_and_optional_paystub_round_trip()
 {
   TemporaryDatabase database;
   InputStore store(database.path());
-  const QuarterInput complete = complete_quarter();
+  QuarterInput complete = complete_quarter();
+  complete.spouse_1_paystub->projection_end_date = "2026-10-31";
   store.replace_quarter(complete);
   require(store.load_quarter(1) == complete, "complete quarter should round trip");
 
@@ -140,6 +141,48 @@ void test_complete_and_optional_paystub_round_trip()
   only_first.spouse_1_paystub = paystub();
   store.replace_quarter(only_first);
   require(store.load_quarter(3) == only_first, "optional spouse paystub should round trip");
+}
+
+void test_populated_schema_migration_preserves_paystubs()
+{
+  TemporaryDatabase database;
+  InputStore store(database.path());
+  const QuarterInput original = complete_quarter();
+  store.replace_quarter(original);
+
+  sqlite3* raw = nullptr;
+  require(sqlite3_open(database.path().c_str(), &raw) == SQLITE_OK, "open populated legacy database");
+  require(sqlite3_exec(raw, "ALTER TABLE paystubs DROP COLUMN projection_end_date; INSERT INTO schema_migrations VALUES(3);", nullptr, nullptr, nullptr) == SQLITE_OK,
+          "create populated version 3 schema");
+  sqlite3_close(raw);
+
+  InputStore migrated(database.path());
+  require(migrated.schema_version() == 4, "populated database advances to migration 4");
+  require(migrated.load_quarter(1) == original, "migration preserves existing paystub rows and values");
+}
+
+void test_projection_end_date_validation()
+{
+  TemporaryDatabase database;
+  InputStore store(database.path());
+  QuarterInput input = complete_quarter();
+  input.spouse_1_paystub->projection_end_date = "2026-03-14";
+  require_throws<ValidationError>([&] { store.replace_quarter(input); }, "end before paystub rejected");
+  input.spouse_1_paystub->projection_end_date = "2027-01-01";
+  require_throws<ValidationError>([&] { store.replace_quarter(input); }, "end outside year rejected");
+}
+
+void test_paystub_contradiction_paths()
+{
+  TemporaryDatabase database;
+  InputStore store(database.path());
+  QuarterInput input = complete_quarter();
+  input.spouse_1_paystub->federal_taxable_wages_ytd_cents = 99'999;
+  try { store.replace_quarter(input); } catch (const ValidationError& error) {
+    require(error.path() == "paystubs.spouse_1.federal_taxable_wages_ytd_cents", "wage contradiction identifies spouse field");
+    return;
+  }
+  throw std::runtime_error("wage contradiction must reject save");
 }
 
 void test_zero_missing_negative_and_payment_separation()
@@ -240,6 +283,9 @@ int main()
       {"reopening existing database", test_reopening_existing_database},
       {"household round trip and stable identities", test_household_round_trip_and_stable_identities},
       {"complete and optional paystub round trip", test_complete_and_optional_paystub_round_trip},
+      {"populated schema migration preserves paystubs", test_populated_schema_migration_preserves_paystubs},
+      {"projection end date validation", test_projection_end_date_validation},
+      {"paystub contradiction paths", test_paystub_contradiction_paths},
       {"zero, missing, negative, and payment separation", test_zero_missing_negative_and_payment_separation},
       {"replacement clears removed values", test_replacement_clears_removed_values},
       {"invalid quarters and domain constraints", test_invalid_quarters_and_domain_constraints},

@@ -38,6 +38,11 @@ struct ProjectionAmounts {
 struct SpouseProjection {
   SpouseKey spouse;
   std::optional<int> authoritative_quarter;
+  std::optional<std::string> authoritative_paystub_date;
+  std::optional<std::string> pay_frequency;
+  std::optional<std::string> projection_horizon;
+  int completed_pay_periods_at_paystub{};
+  int completed_pay_periods_at_horizon{};
   int remaining_pay_periods{};
   ProjectionAmounts federal_wages;
   ProjectionAmounts california_wages;

@@ -48,7 +48,7 @@ A paystub snapshot represents the latest available paystub for one spouse in the
 
 It contains enough information to identify:
 
-- Paystub date and pay frequency
+- Paystub date, pay frequency, and optional pay-pattern projection end date
 - Current-period regular compensation
 - Current-period bonus compensation
 - Federal taxable wages YTD
@@ -59,11 +59,13 @@ It contains enough information to identify:
 
 A paystub includes a bonus when `current_period_bonus_wages_cents > 0`; this is derived and not stored separately.
 
+`projection_end_date` is `null` to repeat the regular pay pattern through December 31, the paystub date to stop after the reported period, or a later 2026 date to limit projection through that date. It limits a pay pattern only; it is not an employment termination date and does not create a Job or Employer concept.
+
 There is no Job concept. The MVP assumes exactly one consolidated pay source and one paystub snapshot per spouse. Multiple undifferentiated paystubs are unsupported because same-employer YTD totals overlap and must not be added together.
 
 ### Deferred multiple pay sources
 
-A future extension may add lightweight pay sources without becoming a Job feature. Each source needs a stable `pay_source_id`, optional label, paystub snapshots, and an optional projection end date. It does not require employer addresses, job titles, employment dates, or other job-management data.
+A future extension may add lightweight pay sources without becoming a Job feature. Each source needs a stable `pay_source_id`, optional label, and paystub snapshots; each snapshot retains its optional projection end date. It does not require employer addresses, job titles, employment dates, or other job-management data.
 
 For a mid-quarter transition, the old source retains its final YTD paystub and ends its projection; the new source starts with its separate YTD paystub. Projection must sum the latest authoritative paystub from each source while projecting forward only sources without an end date.
 

@@ -10,7 +10,7 @@
 
 namespace estimated_taxes {
 namespace {
-constexpr int kRuleSchemaVersion = 3;
+constexpr int kRuleSchemaVersion = 4;
 
 const char* jurisdiction_name(Jurisdiction value) { return value == Jurisdiction::federal ? "federal" : "california"; }
 Jurisdiction jurisdiction_from(const std::string& value) {

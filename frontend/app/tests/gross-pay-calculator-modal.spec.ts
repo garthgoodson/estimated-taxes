@@ -31,6 +31,30 @@ describe('gross-pay calculator modal', () => {
     expect(wrapper.emitted('apply')).toEqual([[{ mode: 'current_period', regular_wages_cents: 10_001 }]])
   })
 
+  it('warns only when the Federal taxable result is below half of gross', async () => {
+    const atThreshold = mount(GrossPayCalculatorModal, { props: { open: true, mode: 'year_to_date' }, global })
+    let inputs = atThreshold.findAllComponents({ name: 'MoneyInput' })
+    inputs[0]!.vm.$emit('update:modelValue', 10_000)
+    inputs[1]!.vm.$emit('update:modelValue', 5_000)
+    await atThreshold.vm.$nextTick()
+    expect(atThreshold.text()).not.toContain('Taxable wages are substantially below gross earnings.')
+
+    const belowThreshold = mount(GrossPayCalculatorModal, { props: { open: true, mode: 'year_to_date' }, global })
+    inputs = belowThreshold.findAllComponents({ name: 'MoneyInput' })
+    inputs[0]!.vm.$emit('update:modelValue', 10_000)
+    inputs[1]!.vm.$emit('update:modelValue', 5_001)
+    await belowThreshold.vm.$nextTick()
+    expect(belowThreshold.text()).toContain('Check this value')
+    expect(applyButton(belowThreshold).attributes('disabled')).toBeUndefined()
+
+    const aboveThreshold = mount(GrossPayCalculatorModal, { props: { open: true, mode: 'year_to_date' }, global })
+    inputs = aboveThreshold.findAllComponents({ name: 'MoneyInput' })
+    inputs[0]!.vm.$emit('update:modelValue', 10_000)
+    inputs[1]!.vm.$emit('update:modelValue', 4_999)
+    await aboveThreshold.vm.$nextTick()
+    expect(aboveThreshold.text()).not.toContain('Taxable wages are substantially below gross earnings.')
+  })
+
   it('emits both jurisdiction values for YTD and resets on cancel and reopen', async () => {
     const wrapper = mount(GrossPayCalculatorModal, { props: { open: true, mode: 'year_to_date' }, global })
     const inputs = wrapper.findAllComponents({ name: 'MoneyInput' })

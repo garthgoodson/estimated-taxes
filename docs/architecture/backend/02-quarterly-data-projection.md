@@ -48,11 +48,12 @@ The supported pay frequencies and nominal annual period counts are:
 The MVP intentionally does not collect an employer payroll calendar. It uses this deterministic approximation:
 
 ```text
-completed periods = ceiling(day of year(paystub date) x periods per year / days in 2026)
-remaining periods = max(0, periods per year - completed periods)
+projection horizon = December 31 when `projection_end_date` is null; otherwise projection_end_date
+completed periods at a date = ceiling(day of year(date) x periods per year / days in 2026)
+remaining periods = max(0, completed periods at projection horizon - completed periods at paystub date)
 ```
 
-The paystub's current period is already included in YTD totals and is not counted again. The approximation must be shown in calculation detail and may differ from an employer calendar by one pay period.
+The paystub's current period is already included in YTD totals and is not counted again. The approximation must be shown in calculation detail with the authoritative paystub date, frequency, horizon, completed counts, and remaining count; it may differ from an employer calendar by one pay period. A non-null end date limits only the current consolidated pay pattern and assumes no additional modeled wages or withholding after that date.
 
 For each spouse:
 
@@ -123,7 +124,7 @@ The projection provides:
 - Actual federal and California withholding YTD
 - Projected remaining withholding
 - Projected annual withholding
-- Remaining-pay-period count and the regular pay/withholding pattern used for each spouse
+- Authoritative paystub date, frequency, projection horizon, completed-period counts, remaining-pay-period count, and regular pay/withholding pattern used for each spouse
 - Recorded annual dividends
 - Recorded annual short-term gain/loss
 - Recorded annual long-term gain/loss
@@ -143,12 +144,16 @@ Relevant projection warnings include:
 - Qualified dividends exceed ordinary dividends
 - Elapsed investment quarter has no entered data
 - Investment income is not projected into future quarters
+- Pay pattern projection is limited when a selected end date shortens its otherwise year-end horizon
+- Income-tax withholding exceeds corresponding taxable wages or 50 percent of them; verify that income-tax withholding, rather than total payroll taxes, was entered
+- Federal and California taxable wages differ materially; HSA treatment and state-specific adjustments may explain the difference
+- Chronologically later paystub YTD wages or withholding decline; payroll corrections or job transitions may explain this, but the single-pay-source model does not fully represent job transitions
 
 ## Deferred TODO: Multiple pay sources
 
 The MVP has one consolidated source per spouse and therefore selects one authoritative paystub per spouse. A future multiple-source model must group snapshots by stable `pay_source_id`, not merely allow an unstructured list of paystubs.
 
-For each source, the latest eligible paystub is authoritative for that source's YTD amounts. The annual projection sums those authoritative source totals. Only sources without a projection end date repeat their regular wages and withholding into remaining pay periods; an end date stops a pay pattern and does not assert that the spouse is generally unemployed.
+For each source, the latest eligible paystub is authoritative for that source's YTD amounts. The annual projection sums those authoritative source totals. Each source's authoritative paystub uses the same optional projection-end-date semantics as the single-source MVP; an end date stops a pay pattern and does not assert that the spouse is generally unemployed.
 
 ## Exclusions
 

@@ -208,6 +208,11 @@ json_t* projection_json(const AnnualProjection& projection)
     json_t* item = json_object();
     json_object_set_new(item, "key", json_string(spouse_key_name(spouse.spouse)));
     json_object_set_new(item, "authoritative_quarter", spouse.authoritative_quarter ? json_integer(*spouse.authoritative_quarter) : json_null());
+    json_object_set_new(item, "authoritative_paystub_date", optional_string_json(spouse.authoritative_paystub_date));
+    json_object_set_new(item, "pay_frequency", optional_string_json(spouse.pay_frequency));
+    json_object_set_new(item, "projection_horizon", optional_string_json(spouse.projection_horizon));
+    json_object_set_new(item, "completed_pay_periods_at_paystub", json_integer(spouse.completed_pay_periods_at_paystub));
+    json_object_set_new(item, "completed_pay_periods_at_horizon", json_integer(spouse.completed_pay_periods_at_horizon));
     json_object_set_new(item, "remaining_pay_periods", json_integer(spouse.remaining_pay_periods));
     json_object_set_new(item, "federal_wages", projection_amounts_json(spouse.federal_wages));
     json_object_set_new(item, "california_wages", projection_amounts_json(spouse.california_wages));
@@ -376,6 +381,7 @@ json_t* paystub_json(const std::optional<PaystubSnapshot>& paystub)
   json_t* value = json_object();
   json_object_set_new(value, "date", json_string(paystub->date.c_str()));
   json_object_set_new(value, "pay_frequency", json_string(paystub->pay_frequency.c_str()));
+  json_object_set_new(value, "projection_end_date", optional_string_json(paystub->projection_end_date));
   const std::pair<const char*, Cents> fields[] = {
       {"current_period_regular_wages_cents", paystub->current_period_regular_wages_cents},
       {"current_period_bonus_wages_cents", paystub->current_period_bonus_wages_cents},
@@ -653,7 +659,7 @@ json_t* bootstrap_json(const CurrentResult& result, const TaxYearInputs& inputs)
 
 PaystubSnapshot parse_paystub(json_t* value, std::string_view path)
 {
-  require_object(value, {"date", "pay_frequency", "current_period_regular_wages_cents", "current_period_bonus_wages_cents",
+  require_object(value, {"date", "pay_frequency", "projection_end_date", "current_period_regular_wages_cents", "current_period_bonus_wages_cents",
                          "current_period_federal_withholding_cents", "current_period_california_withholding_cents",
                          "federal_taxable_wages_ytd_cents", "california_taxable_wages_ytd_cents",
                          "federal_withholding_ytd_cents", "california_withholding_ytd_cents",
@@ -662,6 +668,7 @@ PaystubSnapshot parse_paystub(json_t* value, std::string_view path)
   PaystubSnapshot paystub;
   paystub.date = string_value(value, "date", path);
   paystub.pay_frequency = string_value(value, "pay_frequency", path);
+  paystub.projection_end_date = optional_string(value, "projection_end_date", path);
   paystub.current_period_regular_wages_cents = integer_value(value, "current_period_regular_wages_cents", path);
   paystub.current_period_bonus_wages_cents = integer_value(value, "current_period_bonus_wages_cents", path);
   paystub.current_period_federal_withholding_cents = integer_value(value, "current_period_federal_withholding_cents", path);

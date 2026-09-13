@@ -95,12 +95,13 @@ One repeated section for each spouse:
 
 - Paystub date
 - Pay frequency
+- **Project this pay pattern through:** year end, after this paystub, or a selected date; this limits repeated regular wages and withholding only
 - **Current pay period:** regular wages, bonus wages, Federal withholding, and California withholding
 - **Year to date:** Federal and California taxable wages, Federal and California withholding, Social Security withholding, Medicare withholding, and California SDI withholding
 
-The saved spouse label appears in each paystub heading. Section headings supply time context, so individual field labels do not repeat “Current pay period” or “YTD”; labels use title case and preserve acronyms. There is no job setup or job selection.
+The saved spouse label appears in each paystub heading. Section headings supply time context, so individual field labels do not repeat “Current pay period” or “YTD”; labels use title case and preserve acronyms. There is no job setup or job selection. The pay-pattern control explains that the estimator models one consolidated pay pattern per spouse and assumes no additional modeled wages after a selected end date.
 
-A frontend-only gross-pay calculator may populate the existing taxable-wage fields without saving its deduction breakdown or calling the API. YTD gross includes all earnings and Apply updates Federal and California taxable wages together. Current-period gross excludes bonuses and other nonrecurring pay; its single regular-wage field uses the Federal result and visibly warns that HSA treatment can differ for California. This is input normalization only, not frontend tax calculation or tax-rule ownership.
+A frontend-only gross-pay calculator may populate the existing taxable-wage fields without saving its deduction breakdown or calling the API. It warns, without blocking Apply, when calculated Federal taxable wages are less than half of entered gross, so users can verify that Roth contributions, taxes, and post-tax deductions were not subtracted. YTD gross includes all earnings and Apply updates Federal and California taxable wages together. Current-period gross excludes bonuses and other nonrecurring pay; its single regular-wage field uses the Federal result and visibly warns that HSA treatment can differ for California. This is input normalization only, not frontend tax calculation or tax-rule ownership.
 
 ### 4. Quarterly investments
 
